@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from transformers import Wav2Vec2Processor
 import torch
 
-from utils.audio import load_audio_section
 from typing import Any, Dict, List, Optional, Union
 import json
 
@@ -11,11 +10,17 @@ cache_dir = '../WAV2VEC_DATA/'
 json_dir = cache_dir + 'JSONS/'
 
 
+def load_audio(filename, start = 0.0, end=None):
+	if not end: duration = None
+	else: duration = end - start
+	audio, sr = librosa.load(filename, sr = 16000, offset=start, 
+        duration=duration)
+	return audio
+
 def _load_audio(item):
-    st, et = item['start_time'], item['end_time']
     filename = item['audiofilename']
     item['audio'] = {}
-    item['audio']['array'] = load_audio_section(st,et,filename)
+    item['audio']['array'] = load_audio(filename)
     item['audio']['sampling_rate'] = 16000
     return item
 

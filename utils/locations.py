@@ -14,9 +14,9 @@ local_ort= '../ort/'
 
 
 cache_dir = '../WAV2VEC_DATA/'
-json_dir = '../JSONS/'
+json_dir = '../JSON/'
 vocab_file = cache_dir + 'vocab.json'
-cgn_phrases = '../cgn_phrases/'
+cgn_phrases_dir = '../cgn_phrases/'
 cgn_phrases_dict = '../cgn_wav_filename_phrases.json'
 cgn_speaker_dict = '../cgn_speakers.json'
 

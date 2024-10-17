@@ -95,6 +95,10 @@ def clean_sampa(sampa):
     return sampa
 
 def clean_orthographic(ort):
+    '''remove punctuation and diacritics from orthographic transcription
+    map multiple spaces to a single space    
+    map all characters to lowercase
+    '''
     ort = ort.replace('!',' ')
     ort = ort.replace('?',' ')
     ort = ort.replace('.',' ')

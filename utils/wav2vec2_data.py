@@ -1,13 +1,12 @@
 from datasets import load_dataset, Audio
 from dataclasses import dataclass, field
+import librosa
+from utils import locations
 from transformers import Wav2Vec2Processor
 import torch
 
 from typing import Any, Dict, List, Optional, Union
 import json
-
-cache_dir = '../WAV2VEC_DATA/'
-json_dir = cache_dir + 'JSONS/'
 
 
 def load_audio(filename, start = 0.0, end=None):
@@ -24,10 +23,13 @@ def _load_audio(item):
     item['audio']['sampling_rate'] = 16000
     return item
 
-def load_component(comp_name, cache_dir = cache_dir, load_audio=True):
+def load_cgn_dataset(dataset_name, transcription = 'sampa',
+    cache_dir = locations.cache_dir, load_audio=True):
     d = {}
     for split in 'train,dev,test'.split(','):
-        filename = json_dir + comp_name + '_' + split + '.json'
+        filename = locations.json_dir + dataset_name + '_' + split + '_'
+        filename += transcription + '.json'
+        print('loading', filename)
         d[split] = load_dataset('json',data_files=filename,field='data',
             cache_dir = cache_dir)
         if load_audio:

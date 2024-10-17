@@ -17,8 +17,16 @@ Copyright 2021, Martijn Bentum, Humanities Lab, Radboud University Nijmegen
 
 
 import sys
+import re
 '''whether to fail if a number cannot be mapped to int'''
 hard_fail_global = None
+
+def map_all_numbers_to_words(text, language = 'dutch'):
+    '''maps all numbers in a text to words'''
+    n2w = Number2word()
+    output = re.sub(r'\d+', lambda x: n2w.toword(x.group(),language), text)
+    return output
+
 
 def frisian_numbers():
 	return open('../NUMBERS/frisian_numbers').read().split('\n')
@@ -52,7 +60,7 @@ class Number2word:
 		self.frisian_number_dict = number_dict('frisian')
 		self.dutch_number_dict = number_dict(language = 'dutch')
 
-	def toword(self,number,language = 'frisian', spaces = None):
+	def toword(self,number,language = 'dutch', spaces = None):
 		'''map digit number to word number'''
 		if spaces != None and type(spaces) == bool: self.spaces = spaces
 		if language.lower() == 'frisian':nd = self.frisian_number_dict 
@@ -79,7 +87,8 @@ def handle_number(number, nd = None,spaces =False):
 	if len_number == 7: return minus +_handle_seven_digit(number,nd,spaces)
 	if len_number == 8: return minus +_handle_eight_digit(number,nd,spaces)
 	if len_number == 9: return minus +_handle_nine_digit(number,nd,spaces)
-	print('handles number upto length 9, return default value 42 ',_handle_two_digit('42',nd,spaces))
+	print('handles number upto length 9, return default value 42 ',
+        _handle_two_digit('42',nd,spaces))
 	return _handle_two_digit('42',nd,spaces)
 
 def _handle_minus(str_number):

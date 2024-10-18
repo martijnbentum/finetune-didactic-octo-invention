@@ -15,10 +15,15 @@ local_ort= '../ort/'
 
 cache_dir = '../WAV2VEC_DATA/'
 json_dir = '../JSON/'
-vocab_file = cache_dir + 'vocab.json'
+vocab_sampa_dir= '../vocab_sampa/'
+vocab_sampa_file = vocab_sampa_dir + 'vocab.json'
+vocab_orthographic_dir= '../vocab_orthographic/'
+vocab_orthographic_file = vocab_orthographic_dir + 'vocab.json'
 cgn_phrases_dir = '../cgn_phrases/'
 cgn_phrases_dict = '../cgn_wav_filename_phrases.json'
 cgn_speaker_dict = '../cgn_speakers.json'
 
-with open(vocab_file) as fin:
-    vocab = json.load(fin)
+with open(vocab_sampa_file) as fin:
+    vocab_sampa = json.load(fin)
+with open(vocab_orthographic_file) as fin:
+    vocab_orthographic = json.load(fin)

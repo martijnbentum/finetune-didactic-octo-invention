@@ -1,5 +1,4 @@
-from datasets import load_metric
-from .wav2vec2_data import cache_dir, load_component
+from .wav2vec2_data import load_cgn_dataset
 from .wav2vec2_data import DataCollatorCTCWithPadding 
 from transformers import Wav2Vec2CTCTokenizer
 from transformers import Wav2Vec2FeatureExtractor
@@ -9,22 +8,24 @@ from transformers import TrainingArguments
 from transformers import Trainer
 import numpy as np
 from datetime import datetime
+import evaluate
 import os
 import json
+from utils import locations
 
 processor = None
-wer_metric = load_metric('wer')
+wer_metric = evaluate.load('wer')
+
 
 def load_vocab(vocab_filename = None):
-    if not vocab_filename:
-        fin = open(cache_dir+ 'vocab.json')
-    else:
-        fin = open(vocab_filename)
-    return json.load(fin)
+    if not vocab_filename: return locations.vocab_sampa
+    with open(vocab_filename) as fin:
+        vocab = json.load(fin)
+    return vocab
 
-def load_tokenizer(vocab_dir = cache_dir,cache_dir = cache_dir):
-    tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(vocab_dir,
-        cache_dir = cache_dir, unk_token='[UNK]',pad_token='[PAD]',
+def load_tokenizer(vocab_file= locations.vocab_sampa_file):
+    tokenizer = Wav2Vec2CTCTokenizer(vocab_file,
+        unk_token='[UNK]',pad_token='[PAD]',
         word_delemiter_token='|')
     return tokenizer
 
@@ -34,10 +35,9 @@ def load_feature_extractor():
         return_attention_mask=True)
     return feature_extractor
 
-def load_processor(vocab_dir= cache_dir, cache_dir = cache_dir, force = False):
+def load_processor(vocab_file= locations.vocab_sampa_file):
     global processor
-    if processor: return processor
-    tokenizer = load_tokenizer(vocab_dir,cache_dir)
+    tokenizer = load_tokenizer(vocab_file)
     feature_extractor = load_feature_extractor()
     processor = Wav2Vec2Processor(feature_extractor=feature_extractor,
         tokenizer=tokenizer)
@@ -54,7 +54,7 @@ def preprocess_item(item):
         item['labels'] = processor(item['sentence']).input_ids
     return item
 
-def preprocess_datasets(datasets,maximum_length = None, sampling_rate = 16000):
+def _preprocess_datasets(datasets,maximum_length = None, sampling_rate = 16000):
     d = datasets
     for key in d.keys():
         column_names = d[key].column_names
@@ -65,10 +65,11 @@ def preprocess_datasets(datasets,maximum_length = None, sampling_rate = 16000):
                 input_columns=['input_length'])
     return d
 
-def preprocess_component(comp_name):
-    processor = load_processor()
-    d = load_component(comp_name)
-    d = preprocess_datasets(d)
+def preprocess_cgn_dataset(dataset_name, transcription = 'sampa', 
+    maximum_length = None):
+    load_processor()
+    d = load_cgn_dataset(dataset_name,transcription)
+    d = _preprocess_datasets(d, maximum_length = maximum_length)
     return d
 
 def load_data_collator():
@@ -90,7 +91,7 @@ def compute_metrics(pred):
 def save_preds_references(preds,references,wer):
     wer = str(int(wer * 100))
     d = datetime.now().strftime("%d_%m_%Y_%H_%M")
-    filename = cache_dir + 'log_dev_wer_' + wer + '-'+d
+    filename = locations.cache_dir + 'log_dev_wer_' + wer + '-'+d
     output = []
     for pred, ref in zip(preds,references):
         output.append(pred + '\t' + ref)
@@ -109,7 +110,7 @@ def load_model(model_name = "facebook/wav2vec2-xls-r-300m"):
         ctc_loss_reduction="mean",
         pad_token_id=processor.tokenizer.pad_token_id,
         vocab_size=len(processor.tokenizer),
-        cache_dir = cache_dir
+        cache_dir = locations.cache_dir
     )
     model.freeze_feature_extractor()
     return model
@@ -135,9 +136,10 @@ def load_training_arguments(experiment_name):
     )
     return training_args
 
-def load_trainer(comp_name, experiment_name,model = None, training_args = None, 
+def load_trainer(dataset_name, transcription, experiment_name,model = None, 
+    training_args = None, maximum_length = None, 
     datasets = None,train = 'train',evaluate='dev'):
-    experiment_name = comp_name + '_' + experiment_name
+    # experiment_name = comp_name + '_' + experiment_name
     print('set processor')
     processor = load_processor()
     print('make data collator')
@@ -150,7 +152,8 @@ def load_trainer(comp_name, experiment_name,model = None, training_args = None,
         training_args = load_training_arguments(experiment_name)
     if not datasets:
         print('load datasets')
-        datasets= preprocess_component(comp_name)
+        datasets= preprocess_cgn_dataset(dataset_name, 
+            transcription = transcription, maximum_length = maximum_length)
     print('defining the trainer')
     trainer = Trainer(
         model=model,
@@ -163,7 +166,7 @@ def load_trainer(comp_name, experiment_name,model = None, training_args = None,
     )
     return trainer
 
-def do_component_training(comp_name,experiment_name):
-    trainer = load_trainer(comp_name, experiment_name)
+def do_component_training(dataset_name,transcription, experiment_name):
+    trainer = load_trainer(dataset_name, transcription, experiment_name)
     trainer.train()
     return trainer

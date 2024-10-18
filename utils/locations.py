@@ -21,7 +21,7 @@ vocab_orthographic_dir= '../vocab_orthographic/'
 vocab_orthographic_file = vocab_orthographic_dir + 'vocab.json'
 cgn_phrases_dir = '../cgn_phrases/'
 cgn_phrases_dict = '../cgn_wav_filename_phrases.json'
-cgn_speaker_dict = '../cgn_speakers.json'
+cgn_speaker_dict = '../cgn_speakers_7.json'
 
 with open(vocab_sampa_file) as fin:
     vocab_sampa = json.load(fin)

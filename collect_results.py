@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 names= ['facebook_300m/','dutch_test_best/',
-    'dutch_test_25k/', 'dutch_test_5k/']
+    'dutch_test_25k/', 'dutch_test_5k/', 'music_100k', 'audio_non_speech_100k',]
 
 def save_json(data, path):
     with open(path, 'w') as f:

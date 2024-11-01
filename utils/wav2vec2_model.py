@@ -98,6 +98,37 @@ def save_preds_references(preds,references,wer):
     with open(filename,'w') as fout:
         fout.write('\n'.join(output))
 
+
+def make_config_for_random_model():
+    from transformers import Wav2Vec2Config
+    processor = load_processor()
+    config = Wav2Vec2Config(
+        attention_dropout=0.0,
+        hidden_dropout=0.0,
+        feat_proj_dropout=0.0,
+        mask_time_prob=0.05,
+        layerdrop=0.0,
+        ctc_loss_reduction="mean",
+        hidden_size=768,        # Hidden size of the model
+        num_attention_heads=12, # Number of attention heads
+        num_hidden_layers=12,   # Number of transformer layers
+        intermediate_size=3072, # Intermediate size in the feedforward layer
+        pad_token_id=processor.tokenizer.pad_token_id,
+        vocab_size=len(processor.tokenizer),
+        cache_dir = locations.cache_dir
+    )
+    return config 
+
+def load_random_model(config = None):
+    '''loads a randomly initialized model
+    optionally takes a model as a template and returns a 
+    randomly initialized model
+    '''
+    if not config: config = make_config_for_random_model()
+    model = Wav2Vec2ForCTC(config)
+    model.freeze_feature_extractor()
+    return model
+
 def load_model(model_name = "facebook/wav2vec2-xls-r-300m"):
     processor = load_processor()
     model = Wav2Vec2ForCTC.from_pretrained(
@@ -123,7 +154,7 @@ def load_training_arguments(experiment_name):
         per_device_train_batch_size=33,
         gradient_accumulation_steps=2,
         evaluation_strategy="steps",
-        num_train_epochs=99,
+        num_train_epochs=21,
         gradient_checkpointing=True,
         fp16=True,
         save_steps=300,

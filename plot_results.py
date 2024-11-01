@@ -14,7 +14,7 @@ def plot(wers, color = None, label = None):
 
 def plot_orthographic(d = None, condition= 'orthographic'):
     if not d: d = load_result_dict()
-    colors = ['red','blue','green','purple']
+    colors = ['red','blue','green','purple','orange','black']
     i = 0
     plt.ion()
     plt.figure()
@@ -25,7 +25,9 @@ def plot_orthographic(d = None, condition= 'orthographic'):
         label = str(label.strip('/'))
         print([label,color])
         plot(wers,color,label)
-    plt.legend()
+    legend = plt.legend()
+    for line in legend.get_lines():
+        line.set_linewidth(6)
     plt.grid(alpha = .5)
     plt.ylabel('wer')
     plt.xlabel('training steps')

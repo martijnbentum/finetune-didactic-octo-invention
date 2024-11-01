@@ -146,7 +146,7 @@ def load_model(model_name = "facebook/wav2vec2-xls-r-300m"):
     model.freeze_feature_extractor()
     return model
 
-def load_training_arguments(experiment_name):
+def load_training_arguments(experiment_name, num_train_epochs = 21):
     if not os.path.isdir(experiment_name):os.mkdir(experiment_name)
     training_args = TrainingArguments(
         output_dir=experiment_name,
@@ -154,7 +154,7 @@ def load_training_arguments(experiment_name):
         per_device_train_batch_size=33,
         gradient_accumulation_steps=2,
         evaluation_strategy="steps",
-        num_train_epochs=21,
+        num_train_epochs=num_train_epochs,
         gradient_checkpointing=True,
         fp16=True,
         save_steps=300,
@@ -169,7 +169,7 @@ def load_training_arguments(experiment_name):
 
 def load_trainer(dataset_name, transcription, experiment_name,model = None, 
     training_args = None, maximum_length = None, 
-    datasets = None,train = 'train',evaluate='dev'):
+    datasets = None,train = 'train',evaluate='dev', num_train_epochs = 21):
     # experiment_name = comp_name + '_' + experiment_name
     print('set processor')
     processor = load_processor()
@@ -180,7 +180,8 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
         model = load_model()
     if not training_args:
         print('load training arguments')
-        training_args = load_training_arguments(experiment_name)
+        training_args = load_training_arguments(experiment_name, 
+            num_train_epochs = num_train_epochs)
     if not datasets:
         print('load datasets')
         datasets= preprocess_cgn_dataset(dataset_name, 

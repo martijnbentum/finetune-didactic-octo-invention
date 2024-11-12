@@ -14,6 +14,7 @@ import json
 from utils import locations
 
 processor = None
+tokenizer = None
 wer_metric = evaluate.load('wer')
 
 
@@ -35,9 +36,12 @@ def load_feature_extractor():
         return_attention_mask=True)
     return feature_extractor
 
-def load_processor(vocab_file= locations.vocab_sampa_file):
+def load_processor(vocab_file = locations.vocab_sampa_file):
     global processor
-    tokenizer = load_tokenizer(vocab_file)
+    if processor: return processor
+    global tokenizer
+    if not tokenizer:
+        tokenizer = load_tokenizer(vocab_file)
     feature_extractor = load_feature_extractor()
     processor = Wav2Vec2Processor(feature_extractor=feature_extractor,
         tokenizer=tokenizer)
@@ -67,13 +71,20 @@ def _preprocess_datasets(datasets,maximum_length = None, sampling_rate = 16000):
 
 def preprocess_cgn_dataset(dataset_name, transcription = 'sampa', 
     maximum_length = None):
-    load_processor()
+    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
+    elif transcription == 'orthographic': 
+        vocab_file = locations.vocab_orthographic_file
+    else: raise ValueError('transcription should be sampa or orthographic')
+    load_processor(vocab_file = vocab_file)
     d = load_cgn_dataset(dataset_name,transcription)
     d = _preprocess_datasets(d, maximum_length = maximum_length)
     return d
 
-def load_data_collator():
-    processor = load_processor()
+def load_data_collator(transcription = 'sampa'):
+    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
+    elif transcription == 'orthographic': 
+        vocab_file = locations.vocab_orthographic_file
+    processor = load_processor(vocab_file = vocab_file)
     return DataCollatorCTCWithPadding(processor = processor,padding = True)
 
 def compute_metrics(pred):
@@ -99,9 +110,13 @@ def save_preds_references(preds,references,wer):
         fout.write('\n'.join(output))
 
 
-def make_config_for_random_model():
+def make_config_for_random_model(transcription = 'sampa'):
     from transformers import Wav2Vec2Config
-    processor = load_processor()
+    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
+    elif transcription == 'orthographic': 
+        vocab_file = locations.vocab_orthographic_file
+    else: raise ValueError('transcription should be sampa or orthographic')
+    processor = load_processor(vocab_file)
     config = Wav2Vec2Config(
         attention_dropout=0.0,
         hidden_dropout=0.0,
@@ -119,18 +134,23 @@ def make_config_for_random_model():
     )
     return config 
 
-def load_random_model(config = None):
+def load_random_model(config = None, transcription = 'sampa'):
     '''loads a randomly initialized model
     optionally takes a model as a template and returns a 
     randomly initialized model
     '''
-    if not config: config = make_config_for_random_model()
+    if not config: config = make_config_for_random_model(transcription)
     model = Wav2Vec2ForCTC(config)
     model.freeze_feature_extractor()
     return model
 
-def load_model(model_name = "facebook/wav2vec2-xls-r-300m"):
-    processor = load_processor()
+def load_model(model_name = "facebook/wav2vec2-xls-r-300m", processor = None,
+    transcription = 'sampa'):
+    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
+    elif transcription == 'orthographic': 
+        vocab_file = locations.vocab_orthographic_file
+    else: raise ValueError('transcription should be sampa or orthographic')
+    if not processor: processor = load_processor(vocab_file)
     model = Wav2Vec2ForCTC.from_pretrained(
         model_name,
         attention_dropout=0.0,
@@ -172,12 +192,16 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
     datasets = None,train = 'train',evaluate='dev', num_train_epochs = 21):
     # experiment_name = comp_name + '_' + experiment_name
     print('set processor')
-    processor = load_processor()
+    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
+    elif transcription == 'orthographic': 
+        vocab_file = locations.vocab_orthographic_file
+    else: raise ValueError('transcription should be sampa or orthographic')
+    processor = load_processor(vocab_file = vocab_file)
     print('make data collator')
-    data_collator = load_data_collator()
+    data_collator = load_data_collator(transcription)
     if not model:
         print('load model')
-        model = load_model()
+        model = load_model(transcription = transcription)
     if not training_args:
         print('load training arguments')
         training_args = load_training_arguments(experiment_name, 

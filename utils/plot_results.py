@@ -22,6 +22,7 @@ def plot_orthographic(d = None, condition= 'orthographic'):
     plt.figure()
     for label, value in d.items():
         wers = value[condition]
+        if not wers: continue
         color = colors[i]
         i += 1
         label = str(label.strip('/'))

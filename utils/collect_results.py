@@ -1,12 +1,14 @@
 import json
 import os
 from pathlib import Path
+from . import locations
 
 
 names= ['facebook_300m/','dutch_test_best/', 'random_model/',
     'dutch_test_25k/', 'dutch_test_5k/', 'music_100k', 'audio_non_speech_100k',
     'dutch_960_1/', 'dutch_960_4/','dutch_960_10/', 'dutch_960_100/',
-    'dutch_960_1000/', 'dutch_960_10000/'] 
+    'dutch_960_1000/', 'dutch_960_10000/', 'dutch_960_2000/',
+    'dutch_960_100000/'] 
 
 def save_json(data, path):
     with open(path, 'w') as f:
@@ -34,7 +36,7 @@ def get_wer_and_step(directory):
     if not os.path.exists(str(directory)):
         print(f'{directory} does not exist')
         return
-    path = make_path(directory)
+    path = Path(locations.make_checkpoint_path(directory))
     d = load_trainer_state(path)
     if not d: 
         print(f'No trainer_state.json in {directory}')
@@ -46,15 +48,3 @@ def get_wer_and_step(directory):
     return output
     
 
-def make_path(directory_name):
-    p = Path(directory_name) 
-    checkpoint = get_latest_created_dir(p)
-    return checkpoint
-
-
-def get_latest_created_dir(path):
-    directories = [p for p in Path(path).iterdir() if p.is_dir()]
-    if not directories:
-        return None  # Return None if there are no directories
-    latest_dir = max(directories, key=lambda p: p.stat().st_ctime)
-    return latest_dir

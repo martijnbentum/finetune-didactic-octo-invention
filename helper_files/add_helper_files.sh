@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# This script is used to add the helper files to the target directory
+# utils/add_helper_files.py provides an alternative method to add the helper files
+
 if [[ $# -lt 2 ]]; then
   echo "Usage: $0 <target_directory> <transcription> [-s (sampa) | -o (orthographic)]"
   return 1
@@ -8,7 +12,7 @@ fi
 goal_dir=$1
 transcription=$2
 
-cp helper_files/*.json $goal_dir
+cp *.json $goal_dir
 
 if [[ $transcription == "-s" ]]; then
   mv $goal_dir"sampa_vocab.json" $goal_dir"vocab.json"

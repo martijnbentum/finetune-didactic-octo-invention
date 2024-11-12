@@ -25,6 +25,8 @@ cgn_phrases_dir = '../cgn_phrases/'
 cgn_phrases_dict = '../cgn_wav_filename_phrases.json'
 cgn_speaker_dict = '../cgn_speakers_7.json'
 
+helper_files_directory = 'helper_files/'
+
 with open(vocab_sampa_file) as fin:
     vocab_sampa = json.load(fin)
 with open(vocab_orthographic_file) as fin:

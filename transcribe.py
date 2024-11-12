@@ -1,9 +1,8 @@
-import audio
+from utils import extract_audio
+from utils import add_helper_files
 import glob
 import os 
-import socket
 import time
-import torch
 from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import Wav2Vec2ProcessorWithLM
@@ -15,14 +14,15 @@ https://huggingface.co/docs/transformers/v4.19.2/en/main_classes/pipelines#trans
 '''
 from transformers import AutomaticSpeechRecognitionPipeline as ap
 
-default_recognizer_dir = "/vol/bigdata2/datasets2/SSHOC-T44-LISpanel-2021/"
-default_recognizer_dir += "TEXT_ANALYSIS/homed_lm_recognizers/cgn/"
-
+default_recognizer_dir = '../sampa_dutch_960_100000/best/'
 
 def load_model(recognizer_dir = default_recognizer_dir):
     model = Wav2Vec2ForCTC.from_pretrained(recognizer_dir)
     return model
 
+def load_processor(recognizer_dir = default_recognizer_dir):
+    processor = Wav2Vec2Processor.from_pretrained(recognizer_dir)
+    return processor
 
 def load_pipeline(recognizer_dir=None, model = None,chunk_length_s = 10, 
     device = -1):
@@ -36,17 +36,15 @@ def load_pipeline(recognizer_dir=None, model = None,chunk_length_s = 10,
                         and the edge effects from chunking
     '''
     print('using device:',device)
-    log('using device: '+ str(device),device)
     if not recognizer_dir: recognizer_dir = default_recognizer_dir
+    print('using recognizer_dir:',recognizer_dir)
+    add_helper_files.add_helper_files(recognizer_dir)
     if not model:
         print('loading model:',recognizer_dir)
-        log('loading model: '+ str(recognizer_dir), device)
         model = load_model(recognizer_dir)
     print('loading processor')
-    log('loading processor',device)
     p= load_processor(recognizer_dir)
     print('loading pipeline')
-    log('loading pipeline',device)
     pipeline = ap(
         feature_extractor =p.feature_extractor,
         model = model,
@@ -63,7 +61,7 @@ def decode_audiofile(filename, pipeline, start=0.0, end=None,
     transcribe an audio file with pipeline object
     loads the audio with librosa
     '''
-    a = audio.load_audio(filename,start,end)
+    a = extract_audio.load_audio(filename,start=start,end=end)
     output = pipeline(a, return_timestamps = timestamp_type)
     return output 
 
@@ -171,42 +169,14 @@ class Transcriber:
         for filename in self.audio_filenames:
             if filename not in self.transcribed_audio_files.keys():
                 print('transcribing: ',filename)
-                log('transcribing: '+filename,self.device)
                 try: o = decode_audiofile(filename, self.pipeline,
                     timestamp_type = self.timestamp_type)
-                except ValueError:
-                    log('failed to transcribe : '+filename,self.device)
+                except ValueError: return
                 save_pipeline_output_to_files(o, filename,self.output_dir)
                 self.transcribed_audio_files[filename] = o
                 self.did_transcription = True
-                log('transcribed: '+filename,self.device)
                 
 
-def check_device(device):
-    '''
-    Check whether the gpu device is valid and available, otherwise tries
-    to find an available device.
-    if device equals -1, cpu is used for decoding
-    '''
-    print('checking gpu device')
-    log('checking gpu device',device)
-    s = gpus.Selector()
-    if device == None:
-        print('no device specified, trying to find an available gpu')
-        log('no device specified, trying to find an available gpu',device)
-        output = s.get_available_divice_on_this_server()
-        log('found: '+str(output),device)
-    elif device == -1:
-        print('running on cpu, this will be slow')
-        output=device
-    elif type(args.device) == int:
-        if type(s.device_available(device)): output = device
-        else: output = None 
-    if output == None:
-        print('could not find a device, doing nothing. Device:',output)
-        log('could not find a device, doing nothing. Device: '+str(output),
-            device)
-    return output
 
 
 
@@ -216,23 +186,17 @@ def check_device(device):
 
 def transcribe(args):
     device, input_dir, output_dir, filename = pre_checks(args)
-    log('keep_alive: '+str(args.keep_alive_minutes), device)
     if args.keep_alive_minutes == None: args.keep_alive_minutes = 0
     keep_alive_seconds = args.keep_alive_minutes * 60
     timestamp_type = 'char' if args.label_timestamps else 'word'
     print('using timestamp type:',timestamp_type)
-    set_status(str(device),'active')
     print('loading transcriber')
-    log('loading transcriber', device)
     transcriber = Transcriber(args.model_dir, input_dir, output_dir,
         device = device, filename = args.filename, 
         timestamp_type = timestamp_type)
     if not _check_transcriber_ok(transcriber): return
     print('start transcribing')
-    log('start transcribing', device)
-    log('keep_alive: '+str(keep_alive_seconds), device)
     last_transcription = time.time()
-    log('start transcription: '+str(last_transcription), device)
     while True:
         transcriber.transcribe()
         if transcriber.did_transcription:
@@ -241,8 +205,6 @@ def transcribe(args):
         if time.time() - last_transcription > keep_alive_seconds:
             break
     print('closing down transcriber')
-    log('closing down transcriber', device)
-    set_status(str(device),'closed')
     return transcriber.transcribed_audio_files
             
     

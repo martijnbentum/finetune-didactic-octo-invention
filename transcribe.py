@@ -1,10 +1,5 @@
-import argparse
-import argument_handler 
 import audio
 import glob
-import gpu_selector as gpus
-from logger import log
-from numba import cuda
 import os 
 import socket
 import time
@@ -13,7 +8,6 @@ from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import Wav2Vec2ProcessorWithLM
 
-fremy_model1 = 'FremyCompany/xls-r-2b-nl-v2_lm-5gram-os'
 
 ''' 
 More info about pipelines for ASR see:
@@ -24,20 +18,11 @@ from transformers import AutomaticSpeechRecognitionPipeline as ap
 default_recognizer_dir = "/vol/bigdata2/datasets2/SSHOC-T44-LISpanel-2021/"
 default_recognizer_dir += "TEXT_ANALYSIS/homed_lm_recognizers/cgn/"
 
-status_directory = '/vol/tensusers/mbentum/AUDIOSERVER/STATUS/'
 
 def load_model(recognizer_dir = default_recognizer_dir):
     model = Wav2Vec2ForCTC.from_pretrained(recognizer_dir)
     return model
 
-def load_processor_with_lm(recognizer_dir = default_recognizer_dir):
-    processor = Wav2Vec2ProcessorWithLM.from_pretrained(recognizer_dir)
-    return processor
-    
-
-def load_processor(recognizer_dir = default_recognizer_dir):
-    processor = Wav2Vec2Processor.from_pretrained(recognizer_dir)
-    return processor
 
 def load_pipeline(recognizer_dir=None, model = None,chunk_length_s = 10, 
     device = -1):
@@ -224,52 +209,9 @@ def check_device(device):
     return output
 
 
-def remove_status(device):
-    ''' removes the old status of the transcribe function in the status_directory. '''
-    print('removing current status:')
-    server_name = socket.gethostname()
-    fn = glob.glob(status_directory + server_name + '_' + device + '_*')
-    print('\n'.join(fn))
-    log('removing current status: ' + '\t'.join(fn),device)
-    for f in fn:
-        os.system('rm ' + f)
 
-def set_status(device,status):
-    ''' sets the status of transcribe function in the status_directory. '''
-    if device == 'None': return
-    remove_status(device)
-    print('setting status:', status)
-    log('setting status: ' + status,device)
-    server_name= socket.gethostname()
-    f =open(status_directory + server_name + '_' + device + '_' + status,'w')
-    f.close()
-
-def pre_checks(args):
-    '''check device and input / output dir'''
-    set_status(str(args.device),'started')
-    device = check_device(args.device)
-    input_dir, output_dir = args.input_dir, args.output_dir
-    if device == None: 
-        raise ValueError('could not start device:',device)
-    if type(input_dir) == str and not input_dir.endswith('/'):
-        input_dir += '/'
-    if not output_dir: output_dir = os.getcwd() 
-    if not output_dir.endswith('/'):
-        output_dir += '/'
-    if not args.filename or type(args.filename) == str: filename = ''
-    return device, input_dir, output_dir, filename
     
 
-def _check_transcriber_ok(transcriber):
-    transcriber.load_audio_filenames()
-    if not transcriber.ok:
-        m ='could not load audiofiles, input_dir: '+str(transcriber.input_dir)
-        m += ', filename: ' + transcriber.filename
-        log(m, device)
-        log('closing down transcriber', transcriber.device)
-        set_status(str(transcriber.device),'closed')
-        return False
-    return True
         
 
 def transcribe(args):
@@ -307,8 +249,3 @@ def transcribe(args):
                 
     
         
-if __name__ == '__main__':
-    args = argument_handler.transcribe_arguments(add_device_field = True)
-    argument_handler.check_arguments(args)
-    transcribe(args)
-

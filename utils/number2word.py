@@ -21,6 +21,11 @@ import re
 '''whether to fail if a number cannot be mapped to int'''
 hard_fail_global = None
 
+def ten_words(nd = None):
+    if not nd: nd = number_dict()
+    ten_words = [nd[x] for x in range(20,91,10)]
+    return ten_words
+
 def number_dict_to_number_words(nd = None):
     if not nd: nd = number_dict()
     w = list(nd.values())  
@@ -37,11 +42,11 @@ def thousand_multipliers(nd = None):
     
 def hunderd_multipliers(nd = None):
     number_words = number_dict_to_number_words(nd)
-    return number_words[2:10]
+    return number_words[2:10] + number_words[11:20]
 
 def hunderd_addition(nd = None):
     number_words = number_dict_to_number_words(nd)
-    return number_words[2:-4]
+    return number_words[1:-4]
 
 def ten_addition(nd = None):
     number_words = number_dict_to_number_words(nd)
@@ -137,29 +142,124 @@ class Word2number:
         if language.lower() == 'dutch':nd = self.dutch_number_dict
         return handle_word(word,nd,spaces)
 
-def handle_million(number_words,nd = None):
-    if not nd: nd = number_dict()
-    million = nd[10**6]
-    try: index = number_words.index(million)
-    except: return 0, number_words
-    if index == 0: return 10**6, number_words[1:]
+def handle_milion(number_words,nd, mnd):
+    milion = nd[10**6]
+    print('milion',milion)
+    index = number_words.index(milion)
+    if index == 0: 
+        print('index 0',number_words)
+        number = 10**6
+    if index == 1:
+        print('index 1',number_words)
+        first_number = number_words[0]
+        print('first number',first_number)
+        if first_number in milion_multipliers(mnd): 
+            number = mnd[first_number] * 10**6
+    if index > 1:
+        number, _= _handle_word(number_words[:index],nd, mnd,
+            skip_milion = True, skip_thousand = True)
+        print('index',index ,number_words, number)
+        number = number * 10**6
+    rest = len(number_words) - (index + 1)
+    print('rest',rest)
+    if rest == 0: return number, number_words
+    extra_number, _ = _handle_word(number_words[index + 1:],nd, mnd,
+        skip_milion = True)
+    return number + extra_number, number_words
+
+def handle_thousand(number_words,nd, mnd):
+    thousand = nd[10**3]
+    index = number_words.index(thousand)
+    if index == 0: number = 10**3 
     if index == 1:
         first_number = number_words[0]
-        if first_number in million_multipliers(nd): 
-            return nd[first_number] * 10**6, number_words[2:]
+        if first_number in thousand_multipliers(mnd): 
+            number = mnd[first_number] * 10**3 
+    if index > 1:
+        number, _= _handle_word(number_words[:index],nd, mnd,
+            skip_milion = True, skip_thousand = True)
+        # number, _ = handle_hunderd(number_words[:2],nd, mnd)
+        number = number * 10**3
+    rest = len(number_words) - (index + 1)
+    print('rest',rest)
+    if rest == 0: return number, number_words
+    if rest == 1:
+        number = number + mnd[number_words[index + 1]]
+        return number, number_words
+    if rest > 1:
+        extra_number, _= _handle_word(number_words[index + 1:],nd, mnd,
+            skip_milion = True, skip_thousand = True)
+        return number + extra_number, number_words
+    
+def handle_hunderd(number_words,nd, mnd):
+    hunderd = nd[100]
+    index = number_words.index(hunderd)
+    print(index)
+    if index == 0: number = 100
+    if index == 1:
+        first_number = number_words[0]
+        if first_number in hunderd_multipliers(mnd): 
+            number =  mnd[first_number] * 100 
     if index == 2:
-        number, number_words = handle_hunderd(number_words[:2],nd)
-        return number * 10**6, number_words[3:]
+        extra_number, _= handle_ten(number_words[:2],nd, mnd)
+        number = extra_number * 100
+        print('extra number',extra_number, number)
+    rest = len(number_words) - (index + 1)
+    print('rest',rest)
+    if rest == 0: return number, number_words
+    if rest == 1:
+        if number_words[index +1] in hunderd_addition(mnd):
+            return number + mnd[number_words[index +1]], number_words
+    if rest > 1:
+        ten_number,_= handle_ten(number_words[index +1:],nd, mnd)
+        return number + ten_number, number_words
     
 
+def handle_ten(number_words,nd, mnd):
+    tens = ten_words(nd)
+    index = check_tens_in_number_words(number_words, tens)
+    number_word = number_words[index]
+    if index == False:
+        raise ValueError('could not find tens', tens,number_words)
+    if index == 0: return mnd[number_word], number_words
+    if index == 1: 
+        first_number = number_words[0]
+        if first_number in ten_addition(mnd):
+            return mnd[first_number] + mnd[number_word], number_words
+
+def check_tens_in_number_words(number_words, tens):
+    index = False
+    for word in tens:
+        if word in number_words:
+            index = number_words.index(word)
+    return index
+
+def _handle_word(number_words, nd, mnd, skip_milion = False, 
+    skip_thousand = False, skip_hundred = False, skip_ten = False):
+    milion = nd[10**6]
+    thousand= nd[10**3]
+    hundred = nd[100]
+    if not skip_milion and milion in number_words: 
+        return handle_milion(number_words,nd, mnd)
+    if not skip_thousand and thousand in number_words: 
+        return handle_thousand(number_words,nd, mnd)
+    if not skip_hundred and hundred in number_words: 
+        return handle_hunderd(number_words,nd, mnd)
+    tens = ten_words(nd)
+    if not skip_ten and check_tens_in_number_words(number_words, tens): 
+        return handle_ten(number_words,nd, mnd)
     
 def handle_word(word,nd = None):
-    if not nd: nd = number_dict(mirror = True)
-    if word.lower() in nd.keys(): return nd[word.lower()]
-    all_number_words = number_dict_to_number_words(nd)
+    if not nd: 
+        nd = number_dict()
+        mnd = number_dict(mirror = True)
+    else: 
+        mnd = mirror_dict(nd)
+    if word.lower() in mnd.keys(): return mnd[word.lower()]
+    all_number_words = number_dict_to_number_words(mnd)
     number_words = discover_word_order(word,all_number_words)
-    nd = mirror_dict(nd)
-    return handle_million(number_words,nd)
+    print('number words',number_words)
+    return _handle_word(number_words,nd, mnd)
 
 def handle_number(number, nd = None,spaces =False):
     '''converts a number into the word representing to number.
@@ -383,6 +483,18 @@ def discover_word_order(text, words):
         while True:
             pos = text.find(word, pos+1)
             if pos == -1: break
+            end = pos + len(word)
+            print(text[pos+end: end+4], 'test', word)
+            if text[pos + end: end+3] == 'tig': continue
+            if text[pos + end: end+4] == 'tien': continue
+            if word == 'tien':
+                start = pos -5
+                if start < 0: start = 0
+                print(text[start:end], '<----')
+                found = False
+                for x in 'zes','zeven','acht','negen':
+                    if x in text[start:end]: found = True
+                if found: continue
             positions.append((pos, word))  # Store position and word
 
     positions.sort()

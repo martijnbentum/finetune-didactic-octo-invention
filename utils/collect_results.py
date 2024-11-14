@@ -1,14 +1,125 @@
 import json
+from matplotlib import cm
+import matplotlib.colors as mcolors
 import os
 from pathlib import Path
+import re
 from . import locations
 
 
 names= ['facebook_300m/','dutch_test_best/', 'random_model/',
-    'dutch_test_25k/', 'dutch_test_5k/', 'music_100k', 'audio_non_speech_100k',
+    'dutch_test_25k/','dutch_test_5k/', 'music_100k', 'audio_non_speech_100k',
     'dutch_960_1/', 'dutch_960_4/','dutch_960_10/', 'dutch_960_100/',
     'dutch_960_1000/', 'dutch_960_10000/', 'dutch_960_2000/',
     'dutch_960_100000/'] 
+
+def _filter_and_order_dutch(directories):
+    dutch = []
+    for directory, checkpoint in directories:
+        if 'dutch' in directory:
+            dutch.append([directory, checkpoint])
+    dutch = sorted(dutch, key = lambda x: int(x[0].split('_')[-1].strip('/')))
+    return dutch
+
+def _filter_non_speech(directories):
+    non_speech = []
+    for directory, checkpoint in directories:
+        for term in ['audio_non_speech', 'music', 'random']:
+            if term in directory:
+                non_speech.append([directory, checkpoint])
+                break
+    return non_speech
+
+def _filter_other(directories):
+    other = []
+    for directory, checkpoint in directories:
+        for term in ['base', 'xlsr']:
+            if term in directory:
+                other.append([directory, checkpoint])
+                break
+    return other
+
+def directory_to_name(directory, remove_terms = []):
+    name = directory.split('/')[-2]
+    for term in remove_terms:
+        name = name.replace(term, '')
+    name = name.replace('_', ' ')
+    name= re.sub(r'\s+', ' ', name)
+    name = name.strip()
+    return name
+
+def add_colors_to_directories(directories, gradient = False, index = 0):
+    if gradient:
+        color_names = cm.get_cmap('viridis',len(directories))
+    else:
+        color_names = list(mcolors.BASE_COLORS.keys())
+    for line in directories:
+        if gradient: color_name = color_names(index)
+        else: color_name = color_names[index]
+        line.append(color_name)
+        index += 1
+    return directories
+
+def _add_names(directories, remove_terms = []):
+    output = []
+    for directory, checkpoint in directories:
+        name = directory_to_name(directory, remove_terms)
+        output.append([directory, checkpoint, name])
+    return output
+
+class Results:
+    def __init__(self):
+        self._set_info()
+
+    def _set_info(self):
+        self.index = 0
+        d = locations.sampa_finetuned_directories()
+        self._sampa_directories = _add_wer_and_step(d)
+        d = locations.orthographic_finetuned_directories()
+        self._orthographic_directories = _add_wer_and_step(d)
+        self._set_dutch()
+        self._set_non_speech()
+        self._set_other()
+        self.sampa = self.sampa_dutch + self.non_speech_sampa 
+        self.sampa += self.other_sampa
+        self.orthographic = self.orthographic_dutch 
+        self.orthographic += self.non_speech_orthographic
+        self.orthographic += self.other_orthographic
+        self.all = self.sampa + self.orthographic
+
+    def _set_dutch(self):
+        d = _filter_and_order_dutch(self._sampa_directories)
+        d = _add_names(d,['sampa','960'])
+        self.sampa_dutch = add_colors_to_directories(d, gradient = True)
+        d = _filter_and_order_dutch(self._orthographic_directories)
+        d = _add_names(d, ['orthographic', '960'])
+        self.orthographic_dutch = add_colors_to_directories(d,
+            gradient = True) 
+
+    def _set_non_speech(self):
+        d = _filter_non_speech(self._sampa_directories)
+        d = _add_names(d)
+        self.non_speech_sampa = add_colors_to_directories(d, index = self.index)
+        d =  _filter_non_speech(self._orthographic_directories)
+        d = _add_names(d)
+        self.non_speech_orthographic = add_colors_to_directories(d, 
+            index = self.index)
+        self.index += len(d)
+            
+    def _set_other(self):
+        d = _filter_other(self._sampa_directories)
+        d = _add_names(d)
+        self.other_sampa = add_colors_to_directories(d, index = self.index)
+        d = _filter_other(self._orthographic_directories)
+        d = _add_names(d)
+        self.other_orthographic = add_colors_to_directories(d, 
+            index = self.index)
+        self.index += len(d)
+
+            
+        
+    
+
 
 def save_json(data, path):
     with open(path, 'w') as f:
@@ -31,6 +142,14 @@ def load_trainer_state(path):
     with open(path / 'trainer_state.json') as f:
         d = json.load(f)
     return d
+
+def _add_wer_and_step(directories):
+    output = []
+    for directory, checkpoint in directories:
+        wers = get_wer_and_step(directory)
+        if wers:
+            output.append([directory, checkpoint, wers])
+    return output
 
 def get_wer_and_step(directory):
     if not os.path.exists(str(directory)):

@@ -1,4 +1,6 @@
+import jiwer
 import json
+import glob
 from matplotlib import cm
 import matplotlib.colors as mcolors
 import os
@@ -7,11 +9,11 @@ import re
 from . import locations
 
 
-names= ['facebook_300m/','dutch_test_best/', 'random_model/',
-    'dutch_test_25k/','dutch_test_5k/', 'music_100k', 'audio_non_speech_100k',
+names= ['xlsr_300m/', 'random_model/',
+    'music', 'audio_non_speech',
     'dutch_960_1/', 'dutch_960_4/','dutch_960_10/', 'dutch_960_100/',
-    'dutch_960_1000/', 'dutch_960_10000/', 'dutch_960_2000/',
-    'dutch_960_100000/'] 
+    'dutch_960_1000/', 'dutch_960_2000/', 'dutch_960_10000/', 
+    'dutch_960_25000/', 'dutch_960_50000/', 'dutch_960_100000/'] 
 
 def _filter_and_order_dutch(directories):
     dutch = []
@@ -155,7 +157,11 @@ def get_wer_and_step(directory):
     if not os.path.exists(str(directory)):
         print(f'{directory} does not exist')
         return
-    path = Path(locations.make_checkpoint_path(directory))
+    checkpoint_directory = locations.make_checkpoint_path(directory)
+    if not checkpoint_directory:
+        print(f'{checkpoint_directory} does not exist')
+        return
+    path = Path(checkpoint_directory)
     d = load_trainer_state(path)
     if not d: 
         print(f'No trainer_state.json in {directory}')
@@ -166,4 +172,56 @@ def get_wer_and_step(directory):
             output.append([log['eval_wer'], log['step']])
     return output
     
+def _handle_ref_hyp_line(line):
+    reference = line['sentence']
+    hypothesis = line['hyp']
+    co = jiwer.process_characters(reference, hypothesis)
+    wo = jiwer.process_words(reference, hypothesis)
+    line['word_aligment'] = jiwer.visualize_alignment(wo)
+    line['character_alignment'] = jiwer.visualize_alignment(co)
+    line['wer'] = wo.wer
+    line['cer'] = co.cer
+
+def handle_ref_hyp_file(filename):
+    with open(filename) as f:
+        d = json.load(f)
+    for line in d['data']:
+        _handle_ref_hyp_line(line)
+    hyp = [x['hyp'] for x in d['data']]
+    ref = [x['sentence'] for x in d['data']]
+    d['wer'] = jiwer.wer(ref, hyp)
+    d['cer'] = jiwer.cer(ref, hyp)
+    output_filename = filename.replace('.json', '_wer.json')
+    print(f'Saving to {output_filename}')
+    with open(output_filename, 'w') as f:
+        json.dump(d, f)
+
+def handle_all_ref_hyp_files():
+    fn = locations.sampa_finetuned_directories()
+    fn += locations.orthographic_finetuned_directories()
+    for directory, checkpoint in fn:
+        transcription = 'sampa' if 'sampa' in directory else 'orthographic'
+        filename = Path(checkpoint) / f'o_test_{transcription}_hyp.json'
+        print('handling', filename)
+        if filename.exists():
+            handle_ref_hyp_file(str(filename))
+
+def collect_wer_cer():
+    fn = locations.sampa_finetuned_directories()
+    fn += locations.orthographic_finetuned_directories()
+    d = {}
+    for directory, checkpoint in fn:
+        transcription = 'sampa' if 'sampa' in directory else 'orthographic'
+        filename = Path(checkpoint) / f'o_test_{transcription}_hyp_wer.json'
+        name = directory.split('/')[-2]
+        print(directory,name)
+        if not filename.exists(): 
+            print(f'{filename} does not exist')
+            continue
+        with open(filename) as f:
+            data = json.load(f)
+        d[name] ={'wer': data['wer'], 'cer': data['cer']}
+    return d
+
+
 

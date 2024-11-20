@@ -209,7 +209,7 @@ def handle_all_ref_hyp_files():
 def collect_wer_cer():
     fn = locations.sampa_finetuned_directories()
     fn += locations.orthographic_finetuned_directories()
-    d = {}
+    d = []
     for directory, checkpoint in fn:
         transcription = 'sampa' if 'sampa' in directory else 'orthographic'
         filename = Path(checkpoint) / f'o_test_{transcription}_hyp_wer.json'
@@ -220,7 +220,14 @@ def collect_wer_cer():
             continue
         with open(filename) as f:
             data = json.load(f)
-        d[name] ={'wer': data['wer'], 'cer': data['cer']}
+        order = int(name.split('_')[-1]) if 'dutch' in name else 0
+        if 'xlsr' in name: order = 10**6
+        if 'base' in name: order = 10**6 - 1
+        short_name = 'dutch' if 'dutch' in name else name.split('_')[-1]
+        if 'xlsr' in name: short_name = 'xlsr'
+        d.append({'wer': data['wer'], 'cer': data['cer'], 
+            'transcription': transcription, 'order': order, 
+            'short_name': short_name,'name': name})
     return d
 
 

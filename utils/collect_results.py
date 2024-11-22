@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import random
 import re
+import shutil
 from . import locations
 
 
@@ -282,6 +283,19 @@ def handle_all_ref_hyp_files():
         if filename.exists():
             handle_ref_hyp_file(str(filename))
 
+def copy_all_ref_hyp_wer_files_to_goal_dir(
+    goal_dir = '../all_ref_hyp_wer_files/'):
+    fn = locations.sampa_finetuned_directories()
+    fn += locations.orthographic_finetuned_directories()
+    for directory, checkpoint in fn:
+        name = directory_to_name(directory).replace(' ', '_')
+        transcription = 'sampa' if 'sampa' in directory else 'orthographic'
+        filename = f'o_test_{transcription}_hyp_wer.json'
+        input_filename = Path(checkpoint) / filename
+        output_filename = Path(goal_dir) / f'{name}_{filename}'
+        print(f'copying {filename} to {output_filename}')
+        shutil.copyfile(input_filename, output_filename)
+
 def checkpoint_to_wer_cer_dict(checkpoint, transcription):
     filename = Path(checkpoint) / f'o_test_{transcription}_hyp_wer.json'
     if not filename.exists(): 
@@ -290,6 +304,7 @@ def checkpoint_to_wer_cer_dict(checkpoint, transcription):
     with open(filename) as f:
         d= json.load(f)
     return d
+
 
 def collect_wer_cer():
     fn = locations.sampa_finetuned_directories()

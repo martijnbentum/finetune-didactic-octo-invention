@@ -5,6 +5,7 @@ from matplotlib import cm
 import matplotlib.colors as mcolors
 import os
 from pathlib import Path
+import random
 import re
 from . import locations
 
@@ -17,35 +18,51 @@ names= ['xlsr_300m/', 'random_model/',
 
 def _filter_and_order_dutch(directories):
     dutch = []
-    for directory, checkpoint in directories:
+    for directory, checkpoint, wers in directories:
         if 'dutch' in directory:
-            dutch.append([directory, checkpoint])
+            dutch.append([directory, checkpoint, wers])
     dutch = sorted(dutch, key = lambda x: int(x[0].split('_')[-1].strip('/')))
     return dutch
 
 def _filter_non_speech(directories):
     non_speech = []
-    for directory, checkpoint in directories:
+    for directory, checkpoint, wers in directories:
         for term in ['audio_non_speech', 'music', 'random']:
             if term in directory:
-                non_speech.append([directory, checkpoint])
+                non_speech.append([directory, checkpoint, wers])
                 break
     return non_speech
 
 def _filter_other(directories):
     other = []
-    for directory, checkpoint in directories:
+    for directory, checkpoint, wers in directories:
         for term in ['base', 'xlsr']:
             if term in directory:
-                other.append([directory, checkpoint])
+                other.append([directory, checkpoint, wers])
                 break
     return other
+
+def find_type(directory):
+    if 'dutch' in directory:
+        return 'dutch', 'speech'
+    for term in ['audio_non_speech', 'music', 'random']:
+        if term in directory:
+            return term, 'non speech'
+    if 'base' in directory:
+        return 'english', 'speech'
+    if 'xlsr' in directory:
+        return 'multilingual', 'speech'
+    raise ValueError(f'Could not find type for {directory}')
+
+    
+
 
 def directory_to_name(directory, remove_terms = []):
     name = directory.split('/')[-2]
     for term in remove_terms:
         name = name.replace(term, '')
     name = name.replace('_', ' ')
+    name = name.replace('960', '')
     name= re.sub(r'\s+', ' ', name)
     name = name.strip()
     return name
@@ -64,10 +81,68 @@ def add_colors_to_directories(directories, gradient = False, index = 0):
 
 def _add_names(directories, remove_terms = []):
     output = []
-    for directory, checkpoint in directories:
+    for directory, checkpoint, wers in directories:
         name = directory_to_name(directory, remove_terms)
-        output.append([directory, checkpoint, name])
+        output.append([directory, checkpoint, wers, name])
     return output
+
+class Result():
+    def __init__(self, directory, checkpoint):
+        self.directory = directory
+        self.checkpoint = checkpoint
+        self.term, self.type = find_type(directory)
+        self.finetune_wers = get_wer_and_step(directory)
+        self.transcription = 'sampa' if 'sampa' in directory else 'orthographic'
+        self.name = directory_to_name(directory, remove_terms = [
+            self.transcription])
+        self.wer_cer_dict = checkpoint_to_wer_cer_dict(self.checkpoint, 
+            self.transcription)
+        self.color = None
+
+    def __repr__(self):
+        m = f'{self.name} | {self.transcription}' 
+        if self.best_eval_wer:
+            m += f' | eval wer: {self.best_eval_wer:.2f}'
+        if self.wer:
+            m += f' | test wer: {self.wer:.2f}'
+        if self.cer:
+            metric = 'cer' if self.transcription == 'orthographic' else 'per'
+            m += f' | {metric}: {self.wer:.2f}'
+        return m
+
+    def set_color(self, color):
+        self.color = color
+
+    @property
+    def best_eval_wer(self):
+        if not self.finetune_wers: return None
+        return min([x[0] for x in self.finetune_wers])
+
+    @property
+    def cer(self):
+        if not self.wer_cer_dict: return None
+        return self.wer_cer_dict['cer']
+
+    @property
+    def wer(self):
+        if not self.wer_cer_dict: return None
+        return self.wer_cer_dict['wer']
+
+    def sample_transcription(self, n = 1):
+        if not self.wer_cer_dict: return []
+        return random.sample(self.wer_cer_dict['data'], n)
+
+    @property
+    def sample_character_alignment(self):
+        if not self.wer_cer_dict: return []
+        line = self.sample_transcription(1)[0]
+        print(line['character_alignment'])
+
+    @property
+    def sample_word_alignment(self):
+        if not self.wer_cer_dict: return []
+        line = self.sample_transcription(1)[0]
+        print(line['word_aligment'])
 
 class Results:
     def __init__(self):
@@ -117,6 +192,7 @@ class Results:
         self.other_orthographic = add_colors_to_directories(d, 
             index = self.index)
         self.index += len(d)
+
 
             
         
@@ -206,20 +282,22 @@ def handle_all_ref_hyp_files():
         if filename.exists():
             handle_ref_hyp_file(str(filename))
 
+def checkpoint_to_wer_cer_dict(checkpoint, transcription):
+    filename = Path(checkpoint) / f'o_test_{transcription}_hyp_wer.json'
+    if not filename.exists(): 
+        print(f'{filename} does not exist')
+        return None
+    with open(filename) as f:
+        d= json.load(f)
+    return d
+
 def collect_wer_cer():
     fn = locations.sampa_finetuned_directories()
     fn += locations.orthographic_finetuned_directories()
     d = []
     for directory, checkpoint in fn:
         transcription = 'sampa' if 'sampa' in directory else 'orthographic'
-        filename = Path(checkpoint) / f'o_test_{transcription}_hyp_wer.json'
-        name = directory.split('/')[-2]
-        print(directory,name)
-        if not filename.exists(): 
-            print(f'{filename} does not exist')
-            continue
-        with open(filename) as f:
-            data = json.load(f)
+        data = checkpoint_to_wer_cer_dict(checkpoint, transcription)
         order = int(name.split('_')[-1]) if 'dutch' in name else 0
         if 'xlsr' in name: order = 10**6
         if 'base' in name: order = 10**6 - 1

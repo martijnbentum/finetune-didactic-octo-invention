@@ -28,6 +28,7 @@ def handle_test_set(recognizer_dir, component = 'o', transcription = 'sampa',
     filename = filename / f'{component}_test_{transcription}_hyp.json'
     if filename.exists() and save and not overwrite:
         print('File exists, doing nothing', filename)
+        return
     d = load_test_set(component = component, transcription = transcription)
     pipeline = load_pipeline(recognizer_dir, device = device)
     for line in progressbar(d['data']):

@@ -1,4 +1,5 @@
 from decouple import config
+import json
 import os
 from pathlib import Path
 from utils import wav2vec2_model
@@ -61,3 +62,22 @@ def finetune_pretrained_checkpoint(checkpoint_dir, experiment_name ,
 def handle_pretrained_model(name, checkpoints):
     pass
 
+def finetune_dutch_large_orthographic(directory = ''):
+    if not directory:
+        directory = '/vol/mlusers/mbentum/beg/models/large-40min/'
+    experiment_name='/vol/mlusers/mbentum/beg/models/large_dutch_ft_comp-o/'
+    vocab_filename = f'{directory}vocab.json'
+    vocab = json.load(open(vocab_filename))
+    tokenizer = wav2vec2_model.Wav2Vec2CTCTokenizer(vocab_filename)
+    feature_extractor = wav2vec2_model.load_feature_extractor()
+    processor = wav2vec2_model.Wav2Vec2Processor(
+        feature_extractor =feature_extractor, tokenizer = tokenizer)
+    wav2vec2_model.processor = processor
+    model = wav2vec2_model.load_model(directory, processor = processor)
+    trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
+        experiment_name=experiment_name, vocab_filename = vocab_filename,
+        processor = processor)
+    assert len(vocab) == model.config.vocab_size
+    return model, vocab, trainer
+    
+    

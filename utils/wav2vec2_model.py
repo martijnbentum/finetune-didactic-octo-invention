@@ -70,12 +70,14 @@ def _preprocess_datasets(datasets,maximum_length = None, sampling_rate = 16000):
     return d
 
 def preprocess_cgn_dataset(dataset_name, transcription = 'sampa', 
-    maximum_length = None):
-    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
-    elif transcription == 'orthographic': 
-        vocab_file = locations.vocab_orthographic_file
-    else: raise ValueError('transcription should be sampa or orthographic')
-    load_processor(vocab_file = vocab_file)
+    maximum_length = None, vocab_file= None, processor = None):
+    if not vocab_file and not processor:
+        if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
+        elif transcription == 'orthographic': 
+            vocab_file = locations.vocab_orthographic_file
+        else: raise ValueError('transcription should be sampa or orthographic')
+    if not processor:
+        load_processor(vocab_file = vocab_file)
     d = load_cgn_dataset(dataset_name,transcription)
     d = _preprocess_datasets(d, maximum_length = maximum_length)
     return d
@@ -189,14 +191,16 @@ def load_training_arguments(experiment_name, num_train_epochs = 21):
 
 def load_trainer(dataset_name, transcription, experiment_name,model = None, 
     training_args = None, maximum_length = None, 
-    datasets = None,train = 'train',evaluate='dev', num_train_epochs = 21):
+    datasets = None,train = 'train',evaluate='dev', num_train_epochs = 21,
+    processor = None, vocab_filename = None):
     # experiment_name = comp_name + '_' + experiment_name
     print('set processor')
-    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
-    elif transcription == 'orthographic': 
-        vocab_file = locations.vocab_orthographic_file
-    else: raise ValueError('transcription should be sampa or orthographic')
-    processor = load_processor(vocab_file = vocab_file)
+    if not vocab_filename:
+        if transcription == 'sampa': vocab_filename = locations.vocab_sampa_file
+        elif transcription == 'orthographic': 
+            vocab_filename = locations.vocab_orthographic_file
+        else: raise ValueError('transcription should be sampa or orthographic')
+    if not processor: processor = load_processor(vocab_file = vocab_filename)
     print('make data collator')
     data_collator = load_data_collator(transcription)
     if not model:
@@ -209,7 +213,8 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
     if not datasets:
         print('load datasets')
         datasets= preprocess_cgn_dataset(dataset_name, 
-            transcription = transcription, maximum_length = maximum_length)
+            transcription = transcription, maximum_length = maximum_length,
+            processor = processor)
     print('defining the trainer')
     trainer = Trainer(
         model=model,

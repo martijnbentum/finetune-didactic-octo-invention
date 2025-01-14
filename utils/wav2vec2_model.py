@@ -171,12 +171,14 @@ def load_model(model_name = "facebook/wav2vec2-xls-r-300m", processor = None,
     model.freeze_feature_extractor()
     return model
 
-def load_training_arguments(experiment_name, num_train_epochs = 21):
+def load_training_arguments(experiment_name, num_train_epochs = 21,
+    warmup_steps = 300, learning_rate = 3e-4, 
+    per_device_train_batch_size = 33):
     if not os.path.isdir(experiment_name):os.mkdir(experiment_name)
     training_args = TrainingArguments(
         output_dir=experiment_name,
         group_by_length=True,
-        per_device_train_batch_size=33,
+        per_device_train_batch_size=per_device_train_batch_size,
         gradient_accumulation_steps=2,
         evaluation_strategy="steps",
         num_train_epochs=num_train_epochs,
@@ -185,8 +187,8 @@ def load_training_arguments(experiment_name, num_train_epochs = 21):
         save_steps=300,
         eval_steps=300,
         logging_steps=50,
-        learning_rate=3e-4,
-        warmup_steps=300,#1000,#300,
+        learning_rate=learning_rate,
+        warmup_steps=warmup_steps,#1000,#300,
         save_total_limit=3,
         push_to_hub=False,
     )
@@ -195,7 +197,8 @@ def load_training_arguments(experiment_name, num_train_epochs = 21):
 def load_trainer(dataset_name, transcription, experiment_name,model = None, 
     training_args = None, maximum_length = None, 
     datasets = None,train = 'train',evaluate='dev', num_train_epochs = 21,
-    processor = None, vocab_filename = None):
+    processor = None, vocab_filename = None, warmup_steps = 300,
+    learning_rate = 3e-4, per_device_train_batch_size = 33):
     # experiment_name = comp_name + '_' + experiment_name
     print('set processor')
     if not vocab_filename:
@@ -213,7 +216,9 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
     if not training_args:
         print('load training arguments')
         training_args = load_training_arguments(experiment_name, 
-            num_train_epochs = num_train_epochs)
+            num_train_epochs = num_train_epochs, warmup_steps = warmup_steps,
+            learning_rate = learning_rate, 
+            per_device_train_batch_size = per_device_train_batch_size)
     if not datasets:
         print('load datasets')
         datasets= preprocess_cgn_dataset(dataset_name, 

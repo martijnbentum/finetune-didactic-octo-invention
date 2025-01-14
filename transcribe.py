@@ -25,7 +25,7 @@ def load_processor(recognizer_dir = default_recognizer_dir):
     return processor
 
 def load_pipeline(recognizer_dir=None, model = None,chunk_length_s = 10, 
-    device = -1):
+    device = -1, copy_helper_files = False):
     '''
     loads a pipeline object that can transcribe audio files
     recognizer_dir      directory that stores the wav2vec2 model
@@ -38,7 +38,8 @@ def load_pipeline(recognizer_dir=None, model = None,chunk_length_s = 10,
     print('using device:',device)
     if not recognizer_dir: recognizer_dir = default_recognizer_dir
     print('using recognizer_dir:',recognizer_dir)
-    add_helper_files.add_helper_files(recognizer_dir)
+    if copy_helper_files:
+        add_helper_files.add_helper_files(recognizer_dir)
     if not model:
         print('loading model:',recognizer_dir)
         model = load_model(recognizer_dir)

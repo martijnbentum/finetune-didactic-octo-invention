@@ -195,11 +195,6 @@ class Results:
         self.index += len(d)
 
 
-            
-        
-    
-
-
 def save_json(data, path):
     with open(path, 'w') as f:
         json.dump(data, f)
@@ -230,11 +225,12 @@ def _add_wer_and_step(directories):
             output.append([directory, checkpoint, wers])
     return output
 
-def get_wer_and_step(directory):
-    if not os.path.exists(str(directory)):
-        print(f'{directory} does not exist')
-        return
-    checkpoint_directory = locations.make_checkpoint_path(directory)
+def get_wer_and_step(directory = '', checkpoint_directory = None):
+    if not checkpoint_directory:
+        if not os.path.exists(str(directory)):
+            print(f'{directory} does not exist')
+            return
+        checkpoint_directory = locations.make_checkpoint_path(directory)
     if not checkpoint_directory:
         print(f'{checkpoint_directory} does not exist')
         return
@@ -313,10 +309,12 @@ def collect_wer_cer():
     for directory, checkpoint in fn:
         transcription = 'sampa' if 'sampa' in directory else 'orthographic'
         data = checkpoint_to_wer_cer_dict(checkpoint, transcription)
-        order = int(name.split('_')[-1]) if 'dutch' in name else 0
+        name = directory_to_name(directory)
+        print(name, directory)
+        order = int(name.split(' ')[-1]) if 'dutch' in name else 0
         if 'xlsr' in name: order = 10**6
         if 'base' in name: order = 10**6 - 1
-        short_name = 'dutch' if 'dutch' in name else name.split('_')[-1]
+        short_name = 'dutch' if 'dutch' in name else name.split(' ')[-1]
         if 'xlsr' in name: short_name = 'xlsr'
         d.append({'wer': data['wer'], 'cer': data['cer'], 
             'transcription': transcription, 'order': order, 

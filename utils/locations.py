@@ -64,3 +64,9 @@ def get_latest_created_dir(path):
     latest_dir = latest_dir.resolve().as_posix()
     if not latest_dir.endswith('/'): latest_dir = latest_dir + '/'
     return latest_dir
+
+def beeld_en_geluid_directories():
+    base_ft_cv = ['orthographic_dutch_55k_400k_ft-cv', 
+        '/vol/mlusers/mbentum/beg/models/base-40min-ft/']
+    base_ft_cgn_o =['orthographic_dutch_55k_400k_ft-cgn-o', 
+        '/vol/mlusers/mbentum/beg/models/base-40min-ft/']

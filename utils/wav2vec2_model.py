@@ -82,11 +82,14 @@ def preprocess_cgn_dataset(dataset_name, transcription = 'sampa',
     d = _preprocess_datasets(d, maximum_length = maximum_length)
     return d
 
-def load_data_collator(transcription = 'sampa'):
-    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
-    elif transcription == 'orthographic': 
-        vocab_file = locations.vocab_orthographic_file
-    processor = load_processor(vocab_file = vocab_file)
+def load_data_collator(transcription = 'sampa', processor = None, 
+    vocab_file = None):
+    if not processor:
+        if not vocab_file:
+            if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
+            elif transcription == 'orthographic': 
+                vocab_file = locations.vocab_orthographic_file
+        processor = load_processor(vocab_file = vocab_file)
     return DataCollatorCTCWithPadding(processor = processor,padding = True)
 
 def compute_metrics(pred):
@@ -183,8 +186,8 @@ def load_training_arguments(experiment_name, num_train_epochs = 21):
         eval_steps=300,
         logging_steps=50,
         learning_rate=3e-4,
-        warmup_steps=300,
-        save_total_limit=6,
+        warmup_steps=300,#1000,#300,
+        save_total_limit=3,
         push_to_hub=False,
     )
     return training_args
@@ -202,7 +205,8 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
         else: raise ValueError('transcription should be sampa or orthographic')
     if not processor: processor = load_processor(vocab_file = vocab_filename)
     print('make data collator')
-    data_collator = load_data_collator(transcription)
+    data_collator = load_data_collator(transcription = transcription,
+        vocab_file = vocab_filename, processor = processor)
     if not model:
         print('load model')
         model = load_model(transcription = transcription)

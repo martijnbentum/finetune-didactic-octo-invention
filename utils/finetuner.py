@@ -62,10 +62,9 @@ def finetune_pretrained_checkpoint(checkpoint_dir, experiment_name ,
 def handle_pretrained_model(name, checkpoints):
     pass
 
-def finetune_dutch_large_orthographic(directory = ''):
+def load_large_model(directory = '' ):
     if not directory:
         directory = '/vol/mlusers/mbentum/beg/models/large-40min/'
-    experiment_name='/vol/mlusers/mbentum/beg/models/large_dutch_ft_comp-o/'
     vocab_filename = f'{directory}vocab.json'
     vocab = json.load(open(vocab_filename))
     tokenizer = wav2vec2_model.Wav2Vec2CTCTokenizer(vocab_filename)
@@ -74,10 +73,29 @@ def finetune_dutch_large_orthographic(directory = ''):
         feature_extractor =feature_extractor, tokenizer = tokenizer)
     wav2vec2_model.processor = processor
     model = wav2vec2_model.load_model(directory, processor = processor)
+    return model, vocab, processor
+
+def finetune_dutch_large_bg_orthographic(directory = ''):
+    if not directory:
+        directory = '/vol/mlusers/mbentum/beg/models/large-40min/'
+    experiment_name='/vol/mlusers/mbentum/beg/models/large_dutch_ft_comp-o/'
+    vocab_filename = f'{directory}vocab.json'
+    model, vocab, processor = load_large_model(directory)
     trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
         experiment_name=experiment_name, vocab_filename = vocab_filename,
-        processor = processor)
+        processor = processor, model = model)
     assert len(vocab) == model.config.vocab_size
     return model, vocab, trainer
     
+def finetune_dutch_base_bg_orthographic(directory = ''):
+    if not directory:
+        directory = '/vol/mlusers/mbentum/beg/models/base-40min/'
+    experiment_name='/vol/mlusers/mbentum/beg/models/base_dutch_ft_comp-o/'
+    vocab_filename = f'{directory}vocab.json'
+    model, vocab, processor = load_large_model(directory)
+    trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
+        experiment_name=experiment_name, vocab_filename = vocab_filename,
+        processor = processor, model = model)
+    assert len(vocab) == model.config.vocab_size
+    return model, vocab, trainer
     

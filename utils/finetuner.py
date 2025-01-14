@@ -87,7 +87,8 @@ def finetune_dutch_large_bg_orthographic(directory = ''):
     assert len(vocab) == model.config.vocab_size
     return model, vocab, trainer
     
-def finetune_dutch_base_bg_orthographic(directory = ''):
+def finetune_dutch_base_bg_orthographic(directory = '', warmup_steps = 2000,
+    learning_rate = 3e-4, per_device_train_batch_size = 33):
     if not directory:
         directory = '/vol/mlusers/mbentum/beg/models/base-40min/'
     experiment_name='/vol/mlusers/mbentum/beg/models/base_dutch_ft_comp-o/'
@@ -95,7 +96,9 @@ def finetune_dutch_base_bg_orthographic(directory = ''):
     model, vocab, processor = load_large_model(directory)
     trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
         experiment_name=experiment_name, vocab_filename = vocab_filename,
-        processor = processor, model = model)
+        processor = processor, model = model, warmup_steps = warmup_steps,
+        learning_rate = learning_rate, 
+        per_device_train_batch_size = per_device_train_batch_size)
     assert len(vocab) == model.config.vocab_size
     return model, vocab, trainer
     

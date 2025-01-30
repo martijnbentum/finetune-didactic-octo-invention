@@ -31,9 +31,15 @@ def make_dataset(name = 'default', selected_data = None,
 def phrases_dict_to_dataset(phrases_dict, sentence_field = 'sampa'):
     '''converst a dictionary of phrase items to dataset format'''
     output = {'data':[]}
+    n_error = 0
     for key, item in phrases_dict.items():
+        o = phrases_item_to_dataset_item(item, key, sentence_field)
+        if not o: 
+            n_error += 1
+            continue
         dataset_item = phrases_item_to_dataset_item(item, key, sentence_field)
         output['data'].append(dataset_item)
+    print('Number of errors (i.e. excluded data)', n_error)
     return output
 
 def phrases_item_to_dataset_item(item, key, sentence_field = 'sampa'):
@@ -42,6 +48,8 @@ def phrases_item_to_dataset_item(item, key, sentence_field = 'sampa'):
     elif sentence_field == 'orthographic': f = clean_orthographic
     else: raise ValueError('sentence_field should be sampa or orthographic')
     output = {}
+    o = f(item[sentence_field])
+    if not o.strip(): return None
     output['sentence'] = f(item[sentence_field])
     filename = locations.cgn_phrases_dir + key.split('/')[-1]
     filename = Path(filename).resolve()

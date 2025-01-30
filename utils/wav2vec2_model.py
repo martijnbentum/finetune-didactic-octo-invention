@@ -173,7 +173,7 @@ def load_model(model_name = "facebook/wav2vec2-xls-r-300m", processor = None,
 
 def load_training_arguments(experiment_name, num_train_epochs = 21,
     warmup_steps = 300, learning_rate = 3e-4, 
-    per_device_train_batch_size = 33):
+    per_device_train_batch_size = 33, eval_steps =300, save_steps = 300):
     if not os.path.isdir(experiment_name):os.mkdir(experiment_name)
     training_args = TrainingArguments(
         output_dir=experiment_name,
@@ -184,8 +184,8 @@ def load_training_arguments(experiment_name, num_train_epochs = 21,
         num_train_epochs=num_train_epochs,
         gradient_checkpointing=True,
         fp16=True,
-        save_steps=300,
-        eval_steps=300,
+        save_steps=save_steps,
+        eval_steps=eval_steps,
         logging_steps=50,
         learning_rate=learning_rate,
         warmup_steps=warmup_steps,#1000,#300,
@@ -198,7 +198,8 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
     training_args = None, maximum_length = None, 
     datasets = None,train = 'train',evaluate='dev', num_train_epochs = 21,
     processor = None, vocab_filename = None, warmup_steps = 300,
-    learning_rate = 3e-4, per_device_train_batch_size = 33):
+    learning_rate = 3e-4, per_device_train_batch_size = 33,
+    eval_steps = 300, save_steps = 300):
     # experiment_name = comp_name + '_' + experiment_name
     print('set processor')
     if not vocab_filename:
@@ -218,7 +219,8 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
         training_args = load_training_arguments(experiment_name, 
             num_train_epochs = num_train_epochs, warmup_steps = warmup_steps,
             learning_rate = learning_rate, 
-            per_device_train_batch_size = per_device_train_batch_size)
+            per_device_train_batch_size = per_device_train_batch_size,
+            eval_steps = eval_steps, save_steps = save_steps)
     if not datasets:
         print('load datasets')
         datasets= preprocess_cgn_dataset(dataset_name, 

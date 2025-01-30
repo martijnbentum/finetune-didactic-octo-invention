@@ -101,7 +101,7 @@ def finetune_dutch_base_bg_orthographic(directory = '', warmup_steps = 5000,
     num_train_epochs = 122, eval_steps = 1000, save_steps = 1000):
     if not directory:
         directory = '/vol/mlusers/mbentum/beg/models/base-40min/'
-    experiment_name='/vol/mlusers/mbentum/beg/models/base_dutch_ft_comp-o/'
+    experiment_name='/vol/mlusers/mbentum/beg/models/base_dutch_ft_comp-o-ft122/'
     vocab_filename = f'{directory}vocab.json'
     model, vocab, processor = load_large_model(directory)
     trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 

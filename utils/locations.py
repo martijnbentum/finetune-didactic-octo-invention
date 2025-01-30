@@ -15,7 +15,8 @@ local_fon= '../fon/'
 local_ort= '../ort/'
 
 
-cache_dir = '../WAV2VEC_DATA/'
+# cache_dir = '../WAV2VEC_DATA/'
+cache_dir = '/vol/mlusers/mbentum/finetuner_cache/'
 json_dir = '../JSON/'
 vocab_sampa_dir= '../vocab_sampa/'
 vocab_sampa_file = vocab_sampa_dir + 'vocab.json'

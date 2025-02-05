@@ -71,3 +71,25 @@ def beeld_en_geluid_directories():
         '/vol/mlusers/mbentum/beg/models/base-40min-ft/']
     base_ft_cgn_o =['orthographic_dutch_55k_400k_ft-cgn-o', 
         '/vol/mlusers/mbentum/beg/models/base-40min-ft/']
+
+def path_and_names_for_speech_training_article():
+    model_dir = '/vol/mlusers/mbentum/speech_training/models/'
+    names_checkpoint_dir = {
+        'nonspeech': f'{model_dir}nonspeech_model', 
+        'fb-en': 'facebook/wav2vec2-base',
+        'fb-xlsr-53': 'facebook/wav2vec2-large-xlsr-53',
+        'fb-xls-r-300m': 'facebook/wav2vec2-xls-r-300m',
+        'gronlp-nl-base': 'gronlp/wav2vec2-dutch-base',
+        'fb-voxp-100k': 'facebook/wav2vec2-base-100k-voxpopuli',
+        'fb-voxp-nl': 'facebook/wav2vec2-base-nl-voxpopuli-v2',
+        }
+    names_goal_dir = {
+        'nonspeech': f'{model_dir}nonspeech_model-fto', 
+        'fb-en': f'{model_dir}wav2vec2-base-fto',
+        'fb-xlsr-53': f'{model_dir}wav2vec2-large-xlsr-53',
+        'fb-xls-r-300m': f'{model_dir}wav2vec2-xls-r-300m-fto',
+        'gronlp-nl-base': f'{model_dir}wav2vec2-dutch-base-fto',
+        'fb-voxp-100k': f'{model_dir}wav2vec2-base-100k-voxpopuli-fto',
+        'fb-voxp-nl': f'{model_dir}wav2vec2-base-nl-voxpopuli-v2-fto',
+        }
+    return names_checkpoint_dir, names_goal_dir

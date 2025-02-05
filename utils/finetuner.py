@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 from utils import wav2vec2_model
+from utils import locations
 
 def check_pretrained_checkpoint_exists(checkpoint_name,directory = None ):
     if not directory:
@@ -47,6 +48,7 @@ def collect_pretrained_checkpoints(pretrained_model_dir = None):
     p = Path(pretrained_model_dir)
     dirs = p.glob('*/pytorch_model.bin')
     return [str(d.parent) for d in dirs]
+
 
 
 def finetune_pretrained_checkpoint(checkpoint_dir, experiment_name ,
@@ -178,3 +180,21 @@ def finetune_dutch_xls_r_large_bg_orthographic(directory = '',
         eval_steps = eval_steps)
     assert len(vocab) == model.config.vocab_size
     return model, vocab, trainer
+
+def finetune_for_speech_training(name):
+    names = ['nonspeech', 'fb-en', 'fb-xlsr-53', 'gronlp-nl-base',
+        'fb-voxp-100k', 'fb-voxp-nl']
+    if name not in names: 
+        print(f'{name} not in {names}, doing nothing')
+        return
+    wav2vec2_model.processor = None
+    wav2vec2_model.tokenizer = None
+    cp_dir, exp_dir = locations.path_and_names_for_speech_training_article()
+    checkpoint_dir = cp_dir[name]
+    experiment_name = exp_dir[name]
+    model = wav2vec2_model.load_model(checkpoint_dir, transcription = 'orthographic')
+    trainer = wav2vec2_model.load_trainer('o', 'orthographic', 
+        experiment_name, save_steps = 1000, eval_steps = 1000)
+    p =  Path(experiment_name)
+    print(experiment_name, p.exists(), list(p.glob('*')))
+    return model, trainer

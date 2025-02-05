@@ -175,6 +175,7 @@ def load_training_arguments(experiment_name, num_train_epochs = 21,
     warmup_steps = 300, learning_rate = 3e-4, 
     per_device_train_batch_size = 33, eval_steps =300, save_steps = 300):
     if not os.path.isdir(experiment_name):os.mkdir(experiment_name)
+    print('learning rate:', learning_rate)
     training_args = TrainingArguments(
         output_dir=experiment_name,
         group_by_length=True,

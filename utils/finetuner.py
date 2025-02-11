@@ -53,7 +53,8 @@ def collect_pretrained_checkpoints(pretrained_model_dir = None):
 
 def finetune_pretrained_checkpoint(checkpoint_dir, experiment_name ,
     dataset_name = 'o', transcription = 'orthographic'):
-    model = wav2vec2_model.load_model(checkpoint_dir)
+    model = wav2vec2_model.load_model(checkpoint_dir, 
+        transcription = transcription)
     trainer = wav2vec2_model.load_trainer(dataset_name, transcription, 
         experiment_name)
     trainer.train()
@@ -98,20 +99,22 @@ def finetune_dutch_large_bg_orthographic(directory = '', warmup_steps = 5000,
     assert len(vocab) == model.config.vocab_size
     return model, vocab, trainer
     
-def finetune_dutch_base_bg_orthographic(directory = '', warmup_steps = 5000,
-    learning_rate = 5e-6, per_device_train_batch_size = 33,
-    num_train_epochs = 122, eval_steps = 1000, save_steps = 1000):
+def finetune_dutch_base_bg_orthographic_new(directory = '', warmup_steps = 1000,
+    learning_rate = 3e-4, per_device_train_batch_size = 50,
+    num_train_epochs = 140, eval_steps = 1000, save_steps = 1000,
+    group_by_length = False):
     if not directory:
         directory = '/vol/mlusers/mbentum/beg/models/base-40min/'
-    experiment_name='/vol/mlusers/mbentum/beg/models/base_dutch_ft_comp-o-ft122_slow/'
+    experiment_name='/vol/mlusers/mbentum/beg/models/base_dutch_ft_comp-o-ft140/'
     vocab_filename = f'{directory}vocab.json'
     model, vocab, processor = load_large_model(directory)
     trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
         experiment_name=experiment_name, vocab_filename = vocab_filename,
         processor = processor, model = model, warmup_steps = warmup_steps,
-        learning_rate = learning_rate, 
+        learning_rate = learning_rate, num_train_epochs = num_train_epochs,
         per_device_train_batch_size = per_device_train_batch_size,
-        save_steps = save_steps, eval_steps = eval_steps)
+        save_steps = save_steps, eval_steps = eval_steps, 
+        group_by_length = group_by_length)
     assert len(vocab) == model.config.vocab_size
     return model, vocab, trainer
 
@@ -143,9 +146,9 @@ def finetune_xlsr_orthographic(warmup_steps = 5000, learning_rate=5e-5,
     experiment_name='/vol/mlusers/mbentum/beg/models/xlsr_ft_comp-o/'
     vocab_filename = '/vol/mlusers/mbentum/beg/models/large-40min/vocab.json'
     vocab = json.load(open(vocab_filename))
-    tokenizer = wav2vec2_model.Wav2Vec2CTCTokenizer(vocab_filename)
+    tokenizer = wav2vec2_model.wav2vec2ctctokenizer(vocab_filename)
     feature_extractor = wav2vec2_model.load_feature_extractor()
-    processor = wav2vec2_model.Wav2Vec2Processor(
+    processor = wav2vec2_model.wav2vec2processor(
         feature_extractor =feature_extractor, tokenizer = tokenizer)
     wav2vec2_model.processor = processor
     name = 'facebook/wav2vec2-large-xlsr-53'
@@ -161,7 +164,7 @@ def finetune_xlsr_orthographic(warmup_steps = 5000, learning_rate=5e-5,
 
 def finetune_dutch_xls_r_large_bg_orthographic(directory = '', 
     warmup_steps = 5000,
-    learning_rate = 3e-4, per_device_train_batch_size = 33, 
+    learning_rate = 3e-4, per_device_train_batch_size = 50, 
     num_train_epochs = 122, dataset_name = 'o',
     eval_steps = 1000, save_steps = 1000, experiment_name = ''):
     if not directory:
@@ -194,7 +197,84 @@ def finetune_for_speech_training(name):
     experiment_name = exp_dir[name]
     model = wav2vec2_model.load_model(checkpoint_dir, transcription = 'orthographic')
     trainer = wav2vec2_model.load_trainer('o', 'orthographic', 
-        experiment_name, save_steps = 1000, eval_steps = 1000)
+        experiment_name, save_steps = 1000, eval_steps = 1000, model = model)
     p =  Path(experiment_name)
     print(experiment_name, p.exists(), list(p.glob('*')))
     return model, trainer
+
+def finetune_fb_en_orthographic(warmup_steps = 5000, learning_rate=5e-5,
+    num_train_epochs= 60, per_device_train_batch_size =50):
+    experiment_name='/vol/mlusers/mbentum/speech_training/models/'
+    experiment_name+='wav2vec2_base-fb-en-fto/'
+    vocab_filename = '/vol/mlusers/mbentum/beg/models/large-40min/vocab.json'
+    vocab = json.load(open(vocab_filename))
+    tokenizer = wav2vec2_model.Wav2Vec2CTCTokenizer(vocab_filename)
+    feature_extractor = wav2vec2_model.load_feature_extractor()
+    processor = wav2vec2_model.Wav2Vec2Processor(
+        feature_extractor =feature_extractor, tokenizer = tokenizer)
+    wav2vec2_model.processor = processor
+    name = 'facebook/wav2vec2-base'
+    model = wav2vec2_model.load_model(name,processor = wav2vec2_model.processor)
+    trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
+        experiment_name=experiment_name, vocab_filename = vocab_filename,
+        processor = processor, model = model, warmup_steps = warmup_steps,
+        learning_rate = learning_rate, num_train_epochs = num_train_epochs,
+        per_device_train_batch_size = per_device_train_batch_size)
+    assert len(vocab) == model.config.vocab_size
+    print('saving to ', experiment_name)
+    return model, vocab, trainer
+
+def finetune_dutch_base_orthographic(warmup_steps = 5000, learning_rate=5e-5,
+    num_train_epochs= 60, per_device_train_batch_size =50):
+    experiment_name='/vol/mlusers/mbentum/speech_training/models/'
+    experiment_name+='wav2vec2_base-dutch-fto/'
+    vocab_filename = '/vol/mlusers/mbentum/beg/models/large-40min/vocab.json'
+    vocab = json.load(open(vocab_filename))
+    tokenizer = wav2vec2_model.Wav2Vec2CTCTokenizer(vocab_filename)
+    feature_extractor = wav2vec2_model.load_feature_extractor()
+    processor = wav2vec2_model.Wav2Vec2Processor(
+        feature_extractor =feature_extractor, tokenizer = tokenizer)
+    wav2vec2_model.processor = processor
+    name = '../w2v_pretrain_checkpoints/dutch_960/checkpoint_229_100000'
+    model = wav2vec2_model.load_model(name,processor = wav2vec2_model.processor)
+    trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
+        experiment_name=experiment_name, vocab_filename = vocab_filename,
+        processor = processor, model = model, warmup_steps = warmup_steps,
+        learning_rate = learning_rate, num_train_epochs = num_train_epochs,
+        per_device_train_batch_size = per_device_train_batch_size)
+    assert len(vocab) == model.config.vocab_size
+    print('saving to ', experiment_name)
+    return model, vocab, trainer
+
+def finetune_non_speech_orthographic(warmup_steps = 5000, learning_rate=5e-5,
+    num_train_epochs= 60, per_device_train_batch_size =50):
+    experiment_name='/vol/mlusers/mbentum/speech_training/models/'
+    experiment_name+='wav2vec2_non_speech-fto/'
+    vocab_filename = '/vol/mlusers/mbentum/beg/models/large-40min/vocab.json'
+    vocab = json.load(open(vocab_filename))
+    tokenizer = wav2vec2_model.Wav2Vec2CTCTokenizer(vocab_filename)
+    feature_extractor = wav2vec2_model.load_feature_extractor()
+    processor = wav2vec2_model.Wav2Vec2Processor(
+        feature_extractor =feature_extractor, tokenizer = tokenizer)
+    wav2vec2_model.processor = processor
+    name = '/vol/mlusers/mbentum/speech_training/models/nonspeech_model'
+    model = wav2vec2_model.load_model(name,processor = wav2vec2_model.processor)
+    trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
+        experiment_name=experiment_name, vocab_filename = vocab_filename,
+        processor = processor, model = model, warmup_steps = warmup_steps,
+        learning_rate = learning_rate, num_train_epochs = num_train_epochs,
+        per_device_train_batch_size = per_device_train_batch_size)
+    assert len(vocab) == model.config.vocab_size
+    print('saving to ', experiment_name)
+    return model, vocab, trainer
+
+def finetune_dutch_base_bg_nik_orthographic(directory = ''):
+    if not directory:
+        directory = '/vol/mlusers/mbentum/beg/models/base-40min/'
+    experiment_name='/vol/mlusers/mbentum/beg/models/base_dutch_ft_comp-o-80ksteps/'
+    vocab_filename = f'{directory}vocab.json'
+    model, vocab, processor = load_large_model(directory)
+    trainer = wav2vec2_model.load_base_bg_trainer(model, vocab, processor,
+        experiment_name, vocab_filename)
+    assert len(vocab) == model.config.vocab_size
+    return model, vocab, trainer

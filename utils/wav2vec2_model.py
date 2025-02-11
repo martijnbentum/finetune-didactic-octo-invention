@@ -6,6 +6,7 @@ from transformers import Wav2Vec2Processor
 from transformers import Wav2Vec2ForCTC
 from transformers import TrainingArguments
 from transformers import Trainer
+from transformers import TrainerCallback, TrainerState, TrainerControl
 import numpy as np
 from datetime import datetime
 import evaluate
@@ -173,12 +174,13 @@ def load_model(model_name = "facebook/wav2vec2-xls-r-300m", processor = None,
 
 def load_training_arguments(experiment_name, num_train_epochs = 21,
     warmup_steps = 300, learning_rate = 3e-4, 
-    per_device_train_batch_size = 33, eval_steps =300, save_steps = 300):
+    per_device_train_batch_size = 33, eval_steps =300, save_steps = 300,
+    group_by_length = True):
     if not os.path.isdir(experiment_name):os.mkdir(experiment_name)
     print('learning rate:', learning_rate)
     training_args = TrainingArguments(
         output_dir=experiment_name,
-        group_by_length=True,
+        group_by_length=group_by_length,
         per_device_train_batch_size=per_device_train_batch_size,
         gradient_accumulation_steps=2,
         evaluation_strategy="steps",
@@ -200,7 +202,8 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
     datasets = None,train = 'train',evaluate='dev', num_train_epochs = 21,
     processor = None, vocab_filename = None, warmup_steps = 300,
     learning_rate = 3e-4, per_device_train_batch_size = 33,
-    eval_steps = 300, save_steps = 300):
+    eval_steps = 300, save_steps = 300,
+    group_by_length = True):
     # experiment_name = comp_name + '_' + experiment_name
     print('set processor')
     if not vocab_filename:
@@ -221,7 +224,8 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
             num_train_epochs = num_train_epochs, warmup_steps = warmup_steps,
             learning_rate = learning_rate, 
             per_device_train_batch_size = per_device_train_batch_size,
-            eval_steps = eval_steps, save_steps = save_steps)
+            eval_steps = eval_steps, save_steps = save_steps,
+            group_by_length = group_by_length)
     if not datasets:
         print('load datasets')
         datasets= preprocess_cgn_dataset(dataset_name, 
@@ -243,3 +247,82 @@ def do_component_training(dataset_name,transcription, experiment_name):
     trainer = load_trainer(dataset_name, transcription, experiment_name)
     trainer.train()
     return trainer
+
+
+# suggestion Nik 
+
+class freezeLogicCallback(TrainerCallback):
+    def __init__(self, model: Wav2Vec2ForCTC):
+        self.model = model
+
+    def on_train_begin(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
+    ):
+        self.model.freeze_base_model()
+
+    def on_step_end(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs,
+    ):
+        if state.global_step == 10_000:
+            for param in self.model.wav2vec2.parameters():
+                param.requires_grad = True
+
+            self.model.freeze_feature_encoder()
+
+def training_arguments_base(experiment_name):
+    arguments = TrainingArguments(
+            output_dir=experiment_name,
+            push_to_hub=False,
+            save_steps=1000,
+            eval_steps=1000,
+            logging_steps=100,
+            learning_rate=5e-5,
+            weight_decay=0,
+            lr_scheduler_type="warmup_stable_decay",
+            lr_scheduler_kwargs={
+                "num_warmup_steps": 10_000,
+                "num_stable_steps": 30_000,
+                "num_decay_steps": 40_000,
+                "min_lr_ratio": 20,  # of gewoon 0...
+            },
+
+            group_by_length=True,
+            per_device_train_batch_size=50,
+            gradient_accumulation_steps=2,
+            evaluation_strategy="steps",
+            num_train_epochs=122,
+            gradient_checkpointing=True,
+            fp16=True,
+            save_total_limit=3,
+        )
+
+def load_base_bg_trainer(model,vocab, processor, experiment_name,
+    vocab_filename):
+    if not os.path.isdir(experiment_name):os.mkdir(experiment_name)
+    data_collator = load_data_collator(transcription = 'orthographic',
+        vocab_file = vocab_filename, processor = processor)
+    datasets= preprocess_cgn_dataset('o', 
+        transcription = 'orthographic', maximum_length = None,
+        processor = processor)
+    training_args = training_arguments_base(experiment_name)
+    trainer = Trainer(
+        model=model,
+        data_collator=data_collator,
+        args=training_args,
+        compute_metrics=compute_metrics,
+        train_dataset=datasets['train'],
+        eval_dataset=datasets['dev'],
+        tokenizer=processor.feature_extractor,
+        callbacks=[freezeLogicCallback(model)],
+
+    )
+    return trainer
+

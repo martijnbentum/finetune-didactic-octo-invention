@@ -224,6 +224,28 @@ def finetune_fb_en_orthographic(warmup_steps = 5000, learning_rate=5e-5,
     print('saving to ', experiment_name)
     return model, vocab, trainer
 
+def finetune_fb_voxp_100k_orthographic(warmup_steps = 5000, learning_rate=5e-5,
+    num_train_epochs= 60, per_device_train_batch_size =50):
+    experiment_name='/vol/mlusers/mbentum/speech_training/models/'
+    experiment_name+='wav2vec2_base-fb-100k-voxpopuli-fto/'
+    vocab_filename = '/vol/mlusers/mbentum/beg/models/large-40min/vocab.json'
+    vocab = json.load(open(vocab_filename))
+    tokenizer = wav2vec2_model.Wav2Vec2CTCTokenizer(vocab_filename)
+    feature_extractor = wav2vec2_model.load_feature_extractor()
+    processor = wav2vec2_model.Wav2Vec2Processor(
+        feature_extractor =feature_extractor, tokenizer = tokenizer)
+    wav2vec2_model.processor = processor
+    name = 'facebook/wav2vec2-base-100k-voxpopuli'
+    model = wav2vec2_model.load_model(name,processor = wav2vec2_model.processor)
+    trainer = wav2vec2_model.load_trainer('o', transcription ='orthographic', 
+        experiment_name=experiment_name, vocab_filename = vocab_filename,
+        processor = processor, model = model, warmup_steps = warmup_steps,
+        learning_rate = learning_rate, num_train_epochs = num_train_epochs,
+        per_device_train_batch_size = per_device_train_batch_size)
+    assert len(vocab) == model.config.vocab_size
+    print('saving to ', experiment_name)
+    return model, vocab, trainer
+
 def finetune_dutch_base_orthographic(warmup_steps = 5000, learning_rate=5e-5,
     num_train_epochs= 60, per_device_train_batch_size =50):
     experiment_name='/vol/mlusers/mbentum/speech_training/models/'

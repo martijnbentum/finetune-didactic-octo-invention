@@ -5,7 +5,6 @@ import os
 import shutil
 from pathlib import Path
 
-helper_files_directory = Path(locations.helper_files_directory)
 helper_files = ['preprocessor_config.json',
     'special_tokens_map.json',
     'tokenizer_config.json',
@@ -19,7 +18,8 @@ def helper_files_present(checkpoint_dir):
             return False
     return True
 
-def add_helper_files(checkpoint_dir, transcription = None):
+def add_helper_files(checkpoint_dir, transcription = None, 
+    helper_files_directory = None):
     if not transcription:
         if 'orthographic' in  str(checkpoint_dir): 
             transcription = 'orthographic'
@@ -30,6 +30,9 @@ def add_helper_files(checkpoint_dir, transcription = None):
             message += f'checkpoint_dir {checkpoint_dir}'
             message += ' valid transcriptions are orthographic and sampa'
             raise ValueError
+    if not helper_files_directory:
+        helper_files_directory = locations.helper_files_directory
+    helper_files_directory = Path(helper_files_directory)
     checkpoint_dir = Path(checkpoint_dir)
     if not checkpoint_dir.exists():
         raise FileNotFoundError(f'{checkpoint_dir} does not exist')

@@ -1,5 +1,6 @@
 from utils import extract_audio
 from utils import add_helper_files
+from utils import locations
 import glob
 import os 
 import time
@@ -208,6 +209,16 @@ def transcribe(args):
     print('closing down transcriber')
     return transcriber.transcribed_audio_files
             
+
+def transcribe_ifadv_item(item, pipeline):
+    filename = locations.ifadv_wav_16khz_dir + item['filename']
+    start = item['start_time']
+    end = item['end_time']
+    output = decode_audiofile(filename, pipeline, start = start, end = end,
+        timestamp_type = None)
+    item['hyp'] = output['text']
+    return item
+    
     
                 
     

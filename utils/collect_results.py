@@ -246,7 +246,7 @@ def get_wer_and_step(directory = '', checkpoint_directory = None):
     return output
     
 def _handle_ref_hyp_line(line):
-    reference = line['sentence']
+    reference = line['sentence'].lower()
     hypothesis = line['hyp']
     co = jiwer.process_characters(reference, hypothesis)
     wo = jiwer.process_words(reference, hypothesis)
@@ -257,11 +257,13 @@ def _handle_ref_hyp_line(line):
 
 def handle_ref_hyp_file(filename):
     with open(filename) as f:
-        d = json.load(f)
+        temp = json.load(f)
+    if 'data' not in temp:d = {'data':temp}
+    else: d = temp
     for line in d['data']:
         _handle_ref_hyp_line(line)
     hyp = [x['hyp'] for x in d['data']]
-    ref = [x['sentence'] for x in d['data']]
+    ref = [x['sentence'].lower() for x in d['data']]
     d['wer'] = jiwer.wer(ref, hyp)
     d['cer'] = jiwer.cer(ref, hyp)
     output_filename = filename.replace('.json', '_wer.json')

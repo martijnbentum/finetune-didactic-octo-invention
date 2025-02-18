@@ -14,6 +14,10 @@ local_awd = '../awd/'
 local_fon= '../fon/'
 local_ort= '../ort/'
 
+#ifadv
+ifadv_dir = '/vol/tensusers/mbentum/IFADV/'
+ifadv_wav_16khz_dir = ifadv_dir + 'WAV_16KHZ/'
+
 
 # cache_dir = '../WAV2VEC_DATA/'
 cache_dir = '/vol/mlusers/mbentum/finetuner_cache/'
@@ -27,6 +31,7 @@ cgn_phrases_dict = '../cgn_wav_filename_phrases.json'
 cgn_speaker_dict = '../cgn_speakers_7.json'
 
 helper_files_directory = 'helper_files/'
+ifadv_helper_files_directory = 'ifadv_helper_files/'
 
 with open(vocab_sampa_file) as fin:
     vocab_sampa = json.load(fin)
@@ -84,12 +89,13 @@ def path_and_names_for_speech_training_article():
         'fb-voxp-nl': 'facebook/wav2vec2-base-nl-voxpopuli-v2',
         }
     names_goal_dir = {
-        'nonspeech': f'{model_dir}nonspeech_model-fto', 
-        'fb-en': f'{model_dir}wav2vec2-base-fto',
+        'nonspeech': f'{model_dir}wav2vec2_non_speech-fto', 
+        'fb-en': f'{model_dir}wav2vec2_base-fb-en-fto',
         'fb-xlsr-53': f'{model_dir}wav2vec2-large-xlsr-53',
         'fb-xls-r-300m': f'{model_dir}wav2vec2-xls-r-300m-fto',
-        'gronlp-nl-base': f'{model_dir}wav2vec2-dutch-base-fto',
-        'fb-voxp-100k': f'{model_dir}wav2vec2-base-100k-voxpopuli-fto',
+        'gronlp-nl-base': f'{model_dir}wav2vec2-dutch-base-gronlp-nl-fto',
+        'fb-voxp-100k': f'{model_dir}wav2vec2_base-fb-100k-voxpopuli-fto',
         'fb-voxp-nl': f'{model_dir}wav2vec2-base-nl-voxpopuli-v2-fto',
+        'dutch_base': f'{model_dir}wav2vec2_base-dutch-fto',
         }
     return names_checkpoint_dir, names_goal_dir

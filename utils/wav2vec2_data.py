@@ -4,6 +4,7 @@ import librosa
 from utils import locations
 from transformers import Wav2Vec2Processor
 import torch
+from pathlib import Path
 
 from typing import Any, Dict, List, Optional, Union
 import json
@@ -23,6 +24,15 @@ def _load_audio(item):
     item['audio']['sampling_rate'] = 16000
     return item
 
+def _load_ifadv_audio(item):
+    filename = locations.ifadv_wav_16khz_dir + item['filename']
+    start = item['start_time']
+    end = item['end_time']
+    item['audio'] = {}
+    item['audio']['array'] = load_audio(filename, start, end)
+    item['audio']['sampling_rate'] = 16000
+    return item
+
 def load_cgn_dataset(dataset_name, transcription = 'sampa',
     cache_dir = locations.cache_dir, load_audio=True):
     d = {}
@@ -30,14 +40,22 @@ def load_cgn_dataset(dataset_name, transcription = 'sampa',
         filename = locations.json_dir + dataset_name + '_' + split + '_'
         filename += transcription + '.json'
         print('loading', filename)
-        d[split] = load_dataset('json',data_files=filename,field='data',
+        d[split] = d[split] = load_dataset('json',data_files=filename,field='data',
             cache_dir = cache_dir)
         if load_audio:
-            d[split] = d[split] = d[split].map(_load_audio)
+            d[split] = d[split].map(_load_audio)
     for key in d.keys():
         d[key] = d[key]['train']
     return d
 
+def load_ifadv_dataset(cache_dir = locations.cache_dir, load_audio=True):
+    # d = json.load(open('../JSON/ifadv_phrases.json'))
+    filename = locations.json_dir + 'ifadv_phrases.json'
+    d = load_dataset('json',data_files=filename,field='data',
+        cache_dir = cache_dir)
+    if load_audio:
+        d = d.map(_load_ifadv_audio)
+    return d
 
 @dataclass
 class DataCollatorCTCWithPadding:

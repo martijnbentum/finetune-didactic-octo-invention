@@ -153,6 +153,46 @@ def handle_cv(check_point, save = True, overwrite = False, device = -1,
     del pipeline
     return d
 
+def load_nbest_sentences():
+    f = '/vol/mlusers/mbentum/nbest.tsv'
+    with open(f) as fin:
+        lines = fin.read().split('\n')
+    header, data = lines[0], lines[1:]
+    output = []
+    for line in lines[1:]:
+        if not line: continue
+        d = {}
+        line = line.split('\t')
+        d['audio_filename'] = line[0]
+        d['sentence'] = clean_text.clean_text(line[2])
+        d['annotation'] = line[2]
+        d['text'] = line[3]
+        d['has_letter_vocab'] = line[4] == 'True'
+        d['duration'] = float(line[5])
+        if not d['has_letter_vocab']: continue
+        output.append(d)
+    return output 
+
+def handle_nbest(check_point, save = True, overwrite = False, device = -1):
+    pipeline = load_pipeline(check_point, device = device)
+    d = load_nbest_sentences()
+    filename = Path(check_point)
+    filename = filename / f'nbest_test_hyp.json'
+    if filename.exists() and save and not overwrite:
+        print('File exists, doing nothing', filename)
+        return
+    directory=Path('/vol/mlusers/mbentum/nbest/')
+    for line in progressbar(d):
+        f = line['audio_filename']
+        audio_filename = directory / f
+        line['hyp'] = apply_pipeline(pipeline, str(audio_filename))
+    if save:
+        with open(filename,'w') as fout:
+            json.dump(d, fout)
+        print('Saved to', filename)
+    del pipeline
+    return d
+
 def test_speech_training_interspeech_article_models_on_ifadv(device = 1, 
     overwrite = False):
     d, o = locations.path_and_names_for_speech_training_article()
@@ -193,4 +233,12 @@ def test_speech_training_interspeech_article_models_on_cv(device = 1,
         handle_cv(cp, save = True, overwrite = overwrite, 
         device = device, split = split)
 
+def test_speech_training_interspeech_article_models_on_nbest(device = 1,
+    overwrite = False):
+    d, o = locations.path_and_names_for_speech_training_article()
+    names = ['fb-en','dutch_base','fb-voxp-100k','nonspeech']
+    for name in names:
+        print('Testing', name)
+        cp = locations.make_checkpoint_path(o[name])
+        handle_nbest(cp, save = True, overwrite = overwrite, device = device)
 

@@ -14,6 +14,13 @@ local_awd = '../awd/'
 local_fon= '../fon/'
 local_ort= '../ort/'
 
+pretrained_model_dir = '/vol/mlusers/mbentum/speech_training/models/pretrained/'
+pmd = pretrained_model_dir
+dutch_wav2vec2_the_first = pmd + 'wav2vec2_the_first/'
+dutch_wav2vec2_the_second = pmd + 'wav2vec2_the_second/'
+dutch_huibert_the_first = pmd + 'huibert_the_first/second_iteration/'
+dutch_huibert_the_second = pmd + 'huibert_the_second/second_iteration/'
+
 #ifadv
 ifadv_dir = '/vol/tensusers/mbentum/IFADV/'
 ifadv_wav_16khz_dir = ifadv_dir + 'WAV_16KHZ/'

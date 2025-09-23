@@ -40,7 +40,7 @@ def load_cgn_dataset(dataset_name, transcription = 'sampa',
         filename = locations.json_dir + dataset_name + '_' + split + '_'
         filename += transcription + '.json'
         print('loading', filename)
-        d[split] = d[split] = load_dataset('json',data_files=filename,field='data',
+        d[split] = load_dataset('json',data_files=filename,field='data',
             cache_dir = cache_dir)
         if load_audio:
             d[split] = d[split].map(_load_audio)

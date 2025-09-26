@@ -5,7 +5,8 @@ from pathlib import Path
 from utils import wav2vec2_model
 from utils import locations
 
-steps = [200_000, 10, 100_000, 1000, 10_000, 100, 50_000, 5000, 150_000]
+steps = [200_000, 100, 100_000, 10_000, 1000]
+extra_steps = [50_000, 5000, 150_000]
 
 def collect_pretrained_checkpoints(pretrained_model_dir = None):
     if not pretrained_model_dir:
@@ -22,11 +23,24 @@ def collect_pretrained_checkpoints(pretrained_model_dir = None):
     return all_checkpoints
 
 def finetune_pretrained_checkpoint(checkpoint_dir, experiment_name ,
-    dataset_name = 'o', transcription = 'orthographic'):
-    model = wav2vec2_model.load_model(checkpoint_dir, 
-        transcription = transcription)
+    dataset_name = 'o', transcription = 'orthographic', 
+    model_type = 'wav2vec2'):
+    if 'hubert' in checkpoint_dir or 'huibert' in checkpoint_dir:
+        if model_type != 'hubert':
+            raise ValueError('warning, checkpoint_dir suggests hubert')
+    elif 'wav2vec2' in checkpoint_dir or 'Wav2Vec2' in checkpoint_dir:
+        if model_type != 'wav2vec2':
+            raise ValueError('warning, checkpoint_dir suggests wav2vec2')
+    else:
+        raise ValueError('cannot tell from checkpoint_dir if hubert or wav2vec2')
+    if model_type == 'wav2vec2':
+        model = wav2vec2_model.load_model(checkpoint_dir, 
+            transcription = transcription)
+    if model_type == 'hubert':
+        model = wav2vec2_model.load_hubert_model(checkpoint_dir, 
+            transcription = transcription)
     trainer = wav2vec2_model.load_trainer(dataset_name, transcription, 
-        experiment_name)
+        experiment_name, model)
     trainer.train()
     return trainer
 
@@ -41,7 +55,7 @@ def make_checkpoint_finetune_list(pretrained_model_dir, steps = steps):
             if number != step: continue
             experiment_name = f'{cp.split("/")[-2]}_pt-{step}_ft-o/'
             output.append({'checkpoint_dir':cp, 
-                'experiment_name':experiment_name})
+                'experiment_name':locations.finetuned_dir + experiment_name})
     return output
 
 def finetune_all_pretrained_checkpoints_in_list(pretrained_model_dir, steps):
@@ -49,11 +63,6 @@ def finetune_all_pretrained_checkpoints_in_list(pretrained_model_dir, steps):
     for item in finetune_list:
         print('working on ', item)
         finetune_pretrained_checkpoint(**item)
-
-
-     
-    
-    
 
 
 def load_large_model(directory = '' ):

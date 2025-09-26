@@ -21,6 +21,8 @@ dutch_wav2vec2_the_second = pmd + 'wav2vec2_the_second/'
 dutch_huibert_the_first = pmd + 'huibert_the_first/second_iteration/'
 dutch_huibert_the_second = pmd + 'huibert_the_second/second_iteration/'
 
+finetuned_dir = '/vol/mlusers/mbentum/speech_training/finetuned/'
+
 #ifadv
 ifadv_dir = '/vol/tensusers/mbentum/IFADV/'
 ifadv_wav_16khz_dir = ifadv_dir + 'WAV_16KHZ/'

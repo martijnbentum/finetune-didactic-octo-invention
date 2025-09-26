@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib import cm
 
 def load_result_dict():
-    d = json.load(open('wer_results.json'))
+    d = json.load(open('../wer_results.json'))
     return d
 
 def plot(wers, color = None, label = None):

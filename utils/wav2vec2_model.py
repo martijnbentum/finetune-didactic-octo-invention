@@ -1,5 +1,6 @@
 from .wav2vec2_data import load_cgn_dataset
 from .wav2vec2_data import DataCollatorCTCWithPadding 
+from transformers import HubertForCTC
 from transformers import Wav2Vec2CTCTokenizer
 from transformers import Wav2Vec2FeatureExtractor
 from transformers import Wav2Vec2Processor
@@ -151,12 +152,13 @@ def load_random_model(config = None, transcription = 'sampa'):
     return model
 
 def load_model(model_name = "facebook/wav2vec2-xls-r-300m", processor = None,
-    transcription = 'sampa'):
+    transcription = 'orthographic'):
     if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
     elif transcription == 'orthographic': 
         vocab_file = locations.vocab_orthographic_file
     else: raise ValueError('transcription should be sampa or orthographic')
     if not processor: processor = load_processor(vocab_file)
+    print('loading model', model_name)
     model = Wav2Vec2ForCTC.from_pretrained(
         model_name,
         attention_dropout=0.0,
@@ -192,17 +194,17 @@ def load_training_arguments(experiment_name, num_train_epochs = 21,
         logging_steps=50,
         learning_rate=learning_rate,
         warmup_steps=warmup_steps,#1000,#300,
-        save_total_limit=3,
+        save_total_limit=2,
         push_to_hub=False,
     )
     return training_args
 
 def load_trainer(dataset_name, transcription, experiment_name,model = None, 
     training_args = None, maximum_length = None, 
-    datasets = None,train = 'train',evaluate='dev', num_train_epochs = 21,
+    datasets = None,train = 'train',evaluate='dev', num_train_epochs = 20,
     processor = None, vocab_filename = None, warmup_steps = 300,
     learning_rate = 3e-4, per_device_train_batch_size = 33,
-    eval_steps = 300, save_steps = 300,
+    eval_steps = 1000, save_steps = 1000,
     group_by_length = True):
     # experiment_name = comp_name + '_' + experiment_name
     print('set processor')
@@ -218,6 +220,7 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
     if not model:
         print('load model')
         model = load_model(transcription = transcription)
+    else: print('use provided model:', model.name_or_path)
     if not training_args:
         print('load training arguments')
         training_args = load_training_arguments(experiment_name, 
@@ -227,7 +230,7 @@ def load_trainer(dataset_name, transcription, experiment_name,model = None,
             eval_steps = eval_steps, save_steps = save_steps,
             group_by_length = group_by_length)
     if not datasets:
-        print('load datasets')
+        print('load datasets:', dataset_name)
         datasets= preprocess_cgn_dataset(dataset_name, 
             transcription = transcription, maximum_length = maximum_length,
             processor = processor)
@@ -326,3 +329,31 @@ def load_base_bg_trainer(model,vocab, processor, experiment_name,
     )
     return trainer
 
+
+
+
+def load_hubert_model(model_name = "facebook/hubert-base-ls960", 
+    processor = None, transcription = 'orthographic'):
+    if transcription == 'sampa': vocab_file = locations.vocab_sampa_file
+    elif transcription == 'orthographic': 
+        vocab_file = locations.vocab_orthographic_file
+    else: raise ValueError('transcription should be sampa or orthographic')
+    if not processor: processor = load_processor(vocab_file)
+    model = HubertForCTC.from_pretrained(
+        model_name,
+        attention_dropout=0.0,
+        hidden_dropout=0.0,
+        feat_proj_dropout=0.0,
+        mask_time_prob=0.05,
+        layerdrop=0.0,
+        ctc_loss_reduction="mean",
+        pad_token_id=processor.tokenizer.pad_token_id,
+        vocab_size=len(processor.tokenizer),
+        cache_dir = locations.cache_dir
+    )
+    model.freeze_feature_extractor()
+    return model
+
+def load_multilingual_hubert(
+    model_name = "utter-project/mHuBERT-147-base-2nd-iter"):
+    return load_model(model_name)

@@ -53,7 +53,10 @@ def make_checkpoint_finetune_list(pretrained_model_dir, steps = steps):
             if not number.isdigit(): continue
             number = int(number)
             if number != step: continue
-            experiment_name = f'{cp.split("/")[-2]}_pt-{step}_ft-o/'
+            if 'huibert' in cp or 'hubert' in cp:
+                experiment_name = f'{cp.split("/")[-3]}_pt-{step}_ft-o/'
+            else:
+                experiment_name = f'{cp.split("/")[-2]}_pt-{step}_ft-o/'
             output.append({'checkpoint_dir':cp, 
                 'experiment_name':locations.finetuned_dir + experiment_name})
     return output

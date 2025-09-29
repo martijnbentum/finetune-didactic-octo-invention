@@ -42,6 +42,17 @@ cgn_speaker_dict = '../cgn_speakers_7.json'
 helper_files_directory = 'helper_files/'
 ifadv_helper_files_directory = 'ifadv_helper_files/'
 
+def collect_finetuned_directories_learning_trajectories():
+    d = Path(finetuned_dir)
+    directories = list(d.glob('**'))
+    output = []
+    for directory in directories:
+        if 'checkpoint' in str(directory): 
+            last_checkpoint = get_latest_created_dir(directory.parent)
+            if last_checkpoint not in output:
+                output.append( str(last_checkpoint) )
+    return output
+
 with open(vocab_sampa_file) as fin:
     vocab_sampa = json.load(fin)
 with open(vocab_orthographic_file) as fin:
@@ -108,3 +119,6 @@ def path_and_names_for_speech_training_article():
         'dutch_base': f'{model_dir}wav2vec2_base-dutch-fto',
         }
     return names_checkpoint_dir, names_goal_dir
+
+def path_and_names_for_second_speech_training_article():
+    pass

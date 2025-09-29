@@ -25,10 +25,10 @@ def collect_pretrained_checkpoints(pretrained_model_dir = None):
 def finetune_pretrained_checkpoint(checkpoint_dir, experiment_name ,
     dataset_name = 'o', transcription = 'orthographic', 
     model_type = 'wav2vec2'):
-    if 'hubert' in checkpoint_dir or 'huibert' in checkpoint_dir:
+    if 'hubert' in checkpoint_dir.lower() or 'huibert' in checkpoint_dir.lower():
         if model_type != 'hubert':
             raise ValueError('warning, checkpoint_dir suggests hubert')
-    elif 'wav2vec2' in checkpoint_dir or 'Wav2Vec2' in checkpoint_dir:
+    elif 'wav2vec2' in checkpoint_dir.lower():
         if model_type != 'wav2vec2':
             raise ValueError('warning, checkpoint_dir suggests wav2vec2')
     else:

@@ -6,7 +6,6 @@ from progressbar import progressbar
 from pathlib import Path
 
 
-
 def load_test_set(component = 'o', transcription = 'sampa'):
     filename = locations.json_dir 
     filename += f'{component}_test_{transcription}.json'
@@ -14,26 +13,29 @@ def load_test_set(component = 'o', transcription = 'sampa'):
         d = json.load(fin)
     return d
 
-def load_pipeline(recognizer_dir = None, device = -1):
+def load_pipeline(recognizer_dir = None, device = -1, copy_helper_files = False):
     if recognizer_dir is None: 
         recognizer_dir = '../orthographic_dutch_960_100000/checkpoint-13671/'
     pipeline = transcribe.load_pipeline(recognizer_dir = recognizer_dir,
-        device = device)
+        device = device, copy_helper_files =  copy_helper_files)
     return pipeline
 
 def apply_pipeline(pipeline, audio_filename):
     o = pipeline(audio_filename)
     return o['text']
 
-def handle_test_set(recognizer_dir, component = 'o', transcription = 'sampa',
-    save = False, overwrite = False, device = -1):
+def handle_test_set(recognizer_dir, component = 'o', 
+    transcription = 'orthographic', save = False, overwrite = False, 
+    device = -1, copy_helper_files = False):
+    
     filename = Path(recognizer_dir)
     filename = filename / f'{component}_test_{transcription}_hyp.json'
     if filename.exists() and save and not overwrite:
         print('File exists, doing nothing', filename)
         return
     d = load_test_set(component = component, transcription = transcription)
-    pipeline = load_pipeline(recognizer_dir, device = device)
+    pipeline = load_pipeline(recognizer_dir, device = device, 
+        copy_helper_files = copy_helper_files)
     for line in progressbar(d['data']):
         audio_filename = line['audiofilename']
         line['hyp'] = apply_pipeline(pipeline, audio_filename)

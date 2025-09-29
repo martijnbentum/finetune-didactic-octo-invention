@@ -29,7 +29,7 @@ def add_helper_files(checkpoint_dir, transcription = None,
             message = f'provide transcription no valid transciption found in ' 
             message += f'checkpoint_dir {checkpoint_dir}'
             message += ' valid transcriptions are orthographic and sampa'
-            raise ValueError
+            raise ValueError(message)
     if not helper_files_directory:
         helper_files_directory = locations.helper_files_directory
     helper_files_directory = Path(helper_files_directory)

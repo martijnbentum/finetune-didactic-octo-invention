@@ -4,6 +4,7 @@ from utils import locations
 import glob
 import os 
 import time
+from transformers import HubertForCTC
 from transformers import Wav2Vec2ForCTC
 from transformers import Wav2Vec2Processor
 from transformers import Wav2Vec2ProcessorWithLM
@@ -17,8 +18,23 @@ from transformers import AutomaticSpeechRecognitionPipeline as ap
 
 default_recognizer_dir = '../sampa_dutch_960_100000/best/'
 
-def load_model(recognizer_dir = default_recognizer_dir):
-    model = Wav2Vec2ForCTC.from_pretrained(recognizer_dir)
+def load_model(recognizer_dir = default_recognizer_dir, model_type = None):
+    if model_type is None:
+        if 'hubert' in recognizer_dir.lower() or 'huibert' in recognizer_dir: 
+            model_type = 'hubert'
+        elif 'wav2vec2' in recognizer_dir.lower(): model_type = 'wav2vec2'
+        else:
+            m = 'Could not determine model type from recognizer_dir, '
+            m += 'please provide model_type argument, '
+            m += 'valid values are hubert or wav2vec2'
+            raise ValueError(m)
+    if model_type == 'hubert':
+        print('loading hubert model')
+        model = HubertForCTC.from_pretrained(recognizer_dir)
+    elif model_type == 'wav2vec2':
+        print('loading wav2vec2 model')
+        model = Wav2Vec2ForCTC.from_pretrained(recognizer_dir)
+    else: raise ValueError('model_type should be hubert or wav2vec2', model_type)
     return model
 
 def load_processor(recognizer_dir = default_recognizer_dir):
@@ -26,7 +42,8 @@ def load_processor(recognizer_dir = default_recognizer_dir):
     return processor
 
 def load_pipeline(recognizer_dir=None, model = None,chunk_length_s = 10, 
-    device = -1, copy_helper_files = False):
+    device = -1, copy_helper_files = False, transcription = 'orthographic',
+    model_type = None):
     '''
     loads a pipeline object that can transcribe audio files
     recognizer_dir      directory that stores the wav2vec2 model
@@ -40,10 +57,11 @@ def load_pipeline(recognizer_dir=None, model = None,chunk_length_s = 10,
     if not recognizer_dir: recognizer_dir = default_recognizer_dir
     print('using recognizer_dir:',recognizer_dir)
     if copy_helper_files:
-        add_helper_files.add_helper_files(recognizer_dir)
+        add_helper_files.add_helper_files(recognizer_dir, 
+            transcription = transcription)
     if not model:
-        print('loading model:',recognizer_dir)
-        model = load_model(recognizer_dir)
+        print('loading model:',recognizer_dir, 'model_type:', model_type)
+        model = load_model(recognizer_dir, model_type)
     print('loading processor')
     p= load_processor(recognizer_dir)
     print('loading pipeline')

@@ -50,7 +50,7 @@ def collect_finetuned_directories_learning_trajectories():
         if 'checkpoint' in str(directory): 
             last_checkpoint = get_latest_created_dir(directory.parent)
             if last_checkpoint not in output:
-                output.append( str(last_checkpoint) )
+                output.append(last_checkpoint)
     return output
 
 with open(vocab_sampa_file) as fin:

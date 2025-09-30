@@ -255,7 +255,16 @@ def _handle_ref_hyp_line(line):
     line['wer'] = wo.wer
     line['cer'] = co.cer
 
-def handle_ref_hyp_file(filename):
+def handle_ref_hyp_file(filename, overwrite = False, verbose = True):
+    output_filename = filename.replace('.json', '_wer.json')
+    p = Path(output_filename)
+    if p.exists() and not overwrite:
+        if verbose:print(f'{output_filename} exists, loading it')
+        with open(p) as f:
+            d = json.load(f)
+        return d
+    elif p.exists() and overwrite: print(f'Overwriting {output_filename}')
+    if verbose:print(f'Handling {filename}')
     with open(filename) as f:
         temp = json.load(f)
     if 'data' not in temp:d = {'data':temp}
@@ -266,20 +275,90 @@ def handle_ref_hyp_file(filename):
     ref = [x['sentence'].lower() for x in d['data']]
     d['wer'] = jiwer.wer(ref, hyp)
     d['cer'] = jiwer.cer(ref, hyp)
-    output_filename = filename.replace('.json', '_wer.json')
-    print(f'Saving to {output_filename}')
+    if verbose:print(f'Saving to {output_filename}')
     with open(output_filename, 'w') as f:
         json.dump(d, f)
+    return d
 
-def handle_all_ref_hyp_files():
+def finetuned_checkpoint_to_wer(checkpoint, test_name = 'o', 
+    transcription = None, overwrite = False, verbose = True):
+    filename = checkpoint_to_test_transcription_filename(checkpoint,
+        test_name = test_name, transcription = transcription)
+    if filename.exists(): 
+        if verbose: print('handling', filename)
+        return handle_ref_hyp_file(str(filename), overwrite = overwrite,
+            verbose = verbose)
+    m = f'{filename} does not exist, doing nothing\n'
+    if verbose:
+        m += f'use test_transcribe to create it first\n'
+        m += f'test_transcribe.handle_test_set({checkpoint},' 
+        m += f' component = {test_name}, transcription = {transcription},'
+        m += f' save = True, overwrite = False, device = -1)'
+    print(m)
+
+def finetuned_checkpoints_to_wer_dicts(checkpoints, test_name = 'o',
+    transcription = None, overwrite = False, verbose = False):
+    output = []
+    for cp in checkpoints:
+        o = finetuned_checkpoint_to_wer(cp, test_name = test_name,
+            transcription = transcription, overwrite = overwrite,
+            verbose = verbose)
+        if not o: continue
+        name = checkpoint_to_name(cp)
+        print(cp, name)
+        try: step = int(name.split('_pt-')[-1].split('_')[0])
+        except ValueError: step = None
+        wer = o['wer']
+        version = checkpoint_to_model_version(cp, test_name)
+        result_line = f'version: {version.ljust(21)}, step: {step}'
+        result_line += f', test: {test_name}, wer: {wer:.2f}'
+        temp = {'checkpoint': cp, 'name': name, 'version':version, 
+            'test': test_name, 'wer': wer, 'step':step, 'results': o, 
+            'result_line': result_line}
+        output.append(temp)
+    return output
+
+def checkpoint_to_name(checkpoint):
+    p = Path(checkpoint)
+    name = p.parent.stem
+    return name
+        
+def checkpoint_to_model_version(checkpoint, test_name = 'o',):
+    if 'huibert_the_first' in checkpoint:
+        return 'huibert_the_first'
+    if 'huibert_the_second' in checkpoint:
+        return 'huibert_the_second'
+    if 'wav2vec2_the_first' in checkpoint:
+        return 'wav2vec2_the_first'
+    if 'wav2vec2_the_second' in checkpoint:
+        return 'wav2vec2_the_second'
+    name = checkpoint_to_name(checkpoint)
+    return name.replace('_ft-'+test_name, '')
+        
+
+def handle_old_finetuned_directories():
     fn = locations.sampa_finetuned_directories()
     fn += locations.orthographic_finetuned_directories()
-    for directory, checkpoint in fn:
-        transcription = 'sampa' if 'sampa' in directory else 'orthographic'
-        filename = Path(checkpoint) / f'o_test_{transcription}_hyp.json'
-        print('handling', filename)
-        if filename.exists():
-            handle_ref_hyp_file(str(filename))
+    checkpoints = [x[1] for x in fn]
+    output = []
+    for checkpoint in checkpoints:
+        o = finetuned_checkpoint_to_wer(checkpoint)
+        if o: output.append(o)
+    return output
+
+def checkpoint_to_test_transcription_filename(checkpoint, test_name = 'o',
+    transcription = None):
+    if transcription is None:
+        if 'sampa' in checkpoint:
+            transcription = 'sampa' 
+        elif 'orthographic' in checkpoint:
+            transcription = 'orthographic'
+        else:
+            m = 'Could not determine transcription from directory,'
+            m += ' please provide it explicitly'
+            raise ValueError(m)
+    filename = Path(checkpoint) / f'{test_name}_test_{transcription}_hyp.json'
+    return filename
 
 def copy_all_ref_hyp_wer_files_to_goal_dir(
     goal_dir = '../all_ref_hyp_wer_files/'):

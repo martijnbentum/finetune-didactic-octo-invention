@@ -95,7 +95,7 @@ def _check_split(split):
             if s not in ['train','dev','test']:
                 raise ValueError('split should be train, dev or test')
 
-def load_mls_sentences(split = 'test', exclude_pretraining = True):
+def load_mls_sentences(split = 'test', exclude_pretraining = False):
     with open('/vol/mlusers/mbentum/mls/dutch_mls_sentences_zs.tsv') as fin:
         lines = fin.read().split('\n')
     header, temp= lines[0], lines[1:]
@@ -106,7 +106,7 @@ def load_mls_sentences(split = 'test', exclude_pretraining = True):
         for h in ['start_time','end_time', 'duration']:
             d[h] = float(d[h])
         d['sentence'] = d['text'].strip('"')
-        d['audiofilename'] = directory / d['audio_filename']
+        d['audiofilename'] = str(directory / d['split'] / d['audio_filename'])
         _check_split(split)
         if split == 'all': pass
         elif exclude_pretraining and d['in_pretraining']: continue
@@ -127,8 +127,7 @@ def handle_mls(check_point, save = True, overwrite = False, device = -1,
         print('File exists, doing nothing', filename)
         return
     for line in progressbar(d):
-        f = line['audiofilename']
-        audio_filename = directory / line['split'] / f
+        audio_filename = line['audiofilename']
         line['hyp'] = apply_pipeline(pipeline, str(audio_filename))
     if save:
         with open(filename,'w') as fout:
